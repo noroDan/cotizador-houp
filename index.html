@@ -1,0 +1,1592 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cotizador HOUP</title>
+<style>
+  :root {
+    --cyan: #02C1F4;
+    --grey: #797979;
+    --black: #000000;
+    --bg: #ededed;
+    --bg-dark: #0A0A0A;
+    --bg-dark-2: #1A1A1A;
+    --white: #FFFFFF;
+    --border: #d4d4d4;
+    --green: #16a34a;
+    --red: #dc2626;
+    --orange: #f59e0b;
+    --shadow: 0 2px 10px rgba(0,0,0,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Calibri', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--black); min-height: 100vh; line-height: 1.4; }
+  .topbar { background: var(--bg-dark); color: var(--white); padding: 14px 32px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 50; box-shadow: 0 2px 12px rgba(0,0,0,0.2); }
+  .topbar .brand { display: flex; align-items: center; gap: 12px; font-weight: bold; letter-spacing: 4px; font-size: 14px; }
+  .topbar .brand-mark { width: 14px; height: 14px; background: var(--cyan); display: inline-block; }
+  .topbar .actions { display: flex; gap: 8px; align-items: center; }
+  .admin-status { font-size: 11px; padding: 4px 10px; border-radius: 4px; letter-spacing: 1px; font-weight: bold; }
+  .admin-status.locked { background: #2a2a2a; color: #888; }
+  .admin-status.unlocked { background: var(--cyan); color: var(--black); }
+  .btn { border: none; cursor: pointer; padding: 8px 16px; font-size: 13px; font-family: inherit; border-radius: 4px; transition: all 0.15s; font-weight: 600; }
+  .btn-primary { background: var(--cyan); color: var(--black); }
+  .btn-primary:hover { background: #00a8d8; }
+  .btn-secondary { background: transparent; color: var(--white); border: 1px solid #444; }
+  .btn-secondary:hover { background: #2a2a2a; }
+  .btn-ghost { background: transparent; color: var(--cyan); border: 1px solid var(--cyan); }
+  .btn-ghost:hover { background: rgba(2,193,244,0.1); }
+  .btn-danger { background: transparent; color: var(--red); border: 1px solid var(--red); font-size: 11px; padding: 4px 10px; }
+  .btn-danger:hover { background: rgba(220,38,38,0.1); }
+  .layout { display: grid; grid-template-columns: 1fr 380px; gap: 24px; padding: 24px 32px; max-width: 1700px; margin: 0 auto; }
+  @media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } }
+  .section { background: var(--white); border-radius: 8px; padding: 24px; margin-bottom: 20px; box-shadow: var(--shadow); }
+  .section-eyebrow { color: var(--cyan); font-size: 11px; font-weight: bold; letter-spacing: 2px; margin-bottom: 8px; }
+  .section-title { font-size: 22px; font-weight: bold; margin-bottom: 6px; color: var(--black); }
+  .section-sub { color: var(--grey); font-size: 13px; margin-bottom: 20px; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 14px; }
+  .field-row.three { grid-template-columns: 1fr 1fr 1fr; }
+  .field { display: flex; flex-direction: column; }
+  label { font-size: 11px; color: var(--grey); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; margin-bottom: 4px; }
+  input[type="text"], input[type="email"], input[type="number"], input[type="date"], input[type="password"], select, textarea { border: 1px solid var(--border); background: var(--white); padding: 9px 10px; font-size: 14px; font-family: inherit; border-radius: 4px; transition: border 0.15s; }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(2,193,244,0.15); }
+  textarea { resize: vertical; min-height: 60px; }
+  input:disabled { background: #f4f4f4; color: #999; cursor: not-allowed; }
+  .service-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 18px; overflow-x: auto; }
+  .tab { padding: 10px 16px; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--grey); border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.15s; white-space: nowrap; }
+  .tab:hover { color: var(--black); }
+  .tab.active { color: var(--cyan); border-bottom-color: var(--cyan); }
+  .service-card { background: #fafafa; border: 1px solid var(--border); border-radius: 6px; padding: 14px 16px; margin-bottom: 10px; transition: all 0.15s; }
+  .service-card.selected { background: rgba(2,193,244,0.05); border-color: var(--cyan); }
+  .service-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+  .service-card-info { flex: 1; min-width: 0; }
+  .service-cat { font-size: 10px; color: var(--cyan); font-weight: bold; letter-spacing: 1.5px; margin-bottom: 2px; }
+  .service-name { font-weight: 600; font-size: 15px; color: var(--black); }
+  .service-detail { font-size: 11.5px; color: var(--grey); margin-top: 2px; line-height: 1.4; }
+  .service-toggle { flex-shrink: 0; display: flex; align-items: center; gap: 6px; }
+  .service-toggle input[type="checkbox"] { width: 20px; height: 20px; cursor: pointer; accent-color: var(--cyan); }
+  .service-controls { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; padding-top: 10px; border-top: 1px dashed var(--border); align-items: end; }
+  .service-controls .field label { font-size: 9.5px; }
+  .service-controls input[type="number"], .service-controls input[type="text"], .service-controls select { padding: 7px 8px; font-size: 13px; }
+  .service-line-total { text-align: right; font-size: 14px; font-weight: bold; color: var(--cyan); margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--border); }
+  .service-line-total .label { color: var(--grey); font-size: 10px; font-weight: 600; letter-spacing: 1px; margin-right: 8px; text-transform: uppercase; }
+  .breakdown-fund { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 10px; background: rgba(2,193,244,0.04); border-radius: 4px; margin-top: 8px; font-size: 11px; }
+  .breakdown-fund > div { display: flex; flex-direction: column; gap: 2px; }
+  .breakdown-fund .lbl { color: var(--grey); font-size: 9.5px; letter-spacing: 0.5px; text-transform: uppercase; font-weight: 600; }
+  .breakdown-fund .val { color: var(--black); font-weight: bold; font-size: 12px; }
+  .admin-only { display: none; }
+  .admin-mode .admin-only { display: block; }
+  .admin-only-inline { display: none; }
+  .admin-mode .admin-only-inline { display: inline-block; }
+  .admin-config-box { margin-bottom: 10px; padding: 10px; background: #fff5e0; border: 1px dashed #f0c000; border-radius: 4px; }
+  .admin-config-label { font-size: 10px; color: #8a6500; font-weight: bold; letter-spacing: 1px; margin-bottom: 8px; }
+  .event-mgmt-card { background: linear-gradient(135deg, #1A1A1A 0%, #0a0a0a 100%); border: 1px solid var(--cyan); border-radius: 8px; padding: 18px; color: var(--white); margin-bottom: 14px; position: relative; }
+  .event-mgmt-card .event-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
+  .event-mgmt-card .event-tag { color: var(--cyan); font-size: 10px; font-weight: bold; letter-spacing: 2px; margin-bottom: 4px; }
+  .event-mgmt-card .event-title { font-size: 18px; font-weight: bold; color: var(--white); }
+  .event-mgmt-card .event-subtitle { font-size: 12px; color: #aaa; margin-top: 4px; }
+  .event-mgmt-card label { color: #999; }
+  .event-mgmt-card input[type="text"], .event-mgmt-card input[type="number"] { background: #2a2a2a; color: var(--white); border: 1px solid #3a3a3a; }
+  .event-mgmt-card input:disabled { background: #1f1f1f; color: #666; }
+  .event-mgmt-add-btn { background: var(--cyan); color: var(--black); border: none; padding: 14px 24px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; width: 100%; transition: all 0.15s; letter-spacing: 1px; }
+  .event-mgmt-add-btn:hover { background: #00a8d8; }
+  .event-mgmt-card .event-totals { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #2a2a2a; }
+  .event-mgmt-card .event-totals > div { display: flex; flex-direction: column; gap: 2px; }
+  .event-mgmt-card .event-totals .lbl { color: #888; font-size: 9.5px; letter-spacing: 0.5px; text-transform: uppercase; font-weight: 600; }
+  .event-mgmt-card .event-totals .val { color: var(--white); font-weight: bold; font-size: 14px; }
+  .event-mgmt-card .event-totals .val.cyan { color: var(--cyan); }
+  .event-iva-note { font-size: 11px; color: var(--orange); font-style: italic; margin-top: 8px; padding: 8px 10px; background: rgba(245,158,11,0.08); border-radius: 4px; border-left: 2px solid var(--orange); }
+  .event-mgmt-section { margin-top: 24px; margin-bottom: 8px; }
+  .add-custom { margin-top: 12px; padding: 16px; border: 1px dashed var(--border); border-radius: 6px; background: #fafafa; }
+  .add-custom-form { display: grid; grid-template-columns: 1.5fr 1fr 1fr 2fr auto; gap: 10px; align-items: end; }
+  .presets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+  .preset { border: 1px solid var(--border); border-radius: 6px; padding: 14px; cursor: pointer; transition: all 0.15s; background: var(--white); }
+  .preset:hover { border-color: var(--cyan); transform: translateY(-1px); }
+  .preset.selected { border-color: var(--cyan); background: rgba(2,193,244,0.08); box-shadow: 0 0 0 2px rgba(2,193,244,0.2); }
+  .preset-tag { color: var(--cyan); font-size: 10px; font-weight: bold; letter-spacing: 2px; margin-bottom: 4px; }
+  .preset-name { font-weight: bold; font-size: 16px; margin-bottom: 4px; }
+  .preset-desc { font-size: 12px; color: var(--grey); line-height: 1.35; margin-bottom: 8px; }
+  .preset-disc { font-size: 11px; color: var(--cyan); font-weight: bold; font-style: italic; }
+  .sidebar { position: sticky; top: 80px; height: fit-content; }
+  .summary { background: var(--bg-dark); color: var(--white); border-radius: 8px; padding: 24px; box-shadow: var(--shadow); }
+  .summary h3 { font-size: 11px; color: var(--cyan); letter-spacing: 3px; margin-bottom: 6px; font-weight: bold; }
+  .summary .summary-title { font-size: 22px; font-weight: bold; margin-bottom: 18px; }
+  .selected-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; max-height: 280px; overflow-y: auto; padding-right: 4px; }
+  .selected-list::-webkit-scrollbar { width: 6px; }
+  .selected-list::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+  .selected-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; padding: 8px 0; border-bottom: 1px solid #2a2a2a; font-size: 12px; }
+  .selected-row:last-child { border-bottom: none; }
+  .selected-info { flex: 1; min-width: 0; }
+  .selected-name { color: var(--white); font-weight: 600; }
+  .selected-qty { color: #888; font-size: 11px; margin-top: 2px; }
+  .selected-amount { color: var(--white); font-weight: bold; white-space: nowrap; }
+  .selected-row.event-mgmt { border-left: 3px solid var(--cyan); padding-left: 8px; }
+  .empty-msg { color: #666; font-size: 13px; font-style: italic; text-align: center; padding: 20px 0; }
+  .totals { border-top: 1px solid #2a2a2a; padding-top: 14px; }
+  .totals-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; color: #c8c8c8; }
+  .totals-row.discount { color: var(--cyan); }
+  .totals-row.event-mgmt { color: var(--orange); border-top: 1px dashed #2a2a2a; padding-top: 8px; margin-top: 4px; }
+  .totals-row.grand { border-top: 1px solid #2a2a2a; margin-top: 8px; padding-top: 10px; font-size: 18px; font-weight: bold; color: var(--white); }
+  .totals-row.grand .amount { color: var(--cyan); font-size: 22px; }
+  .summary-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 20px; }
+  .summary-actions .btn { width: 100%; padding: 11px; }
+  .saved-list { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+  .saved-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: #fafafa; border: 1px solid var(--border); border-radius: 4px; font-size: 13px; }
+  .saved-row .saved-info { flex: 1; }
+  .saved-row .saved-meta { font-size: 11px; color: var(--grey); }
+  .saved-row .saved-actions { display: flex; gap: 6px; }
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
+  .modal-backdrop.show { display: flex; }
+  .modal { background: var(--white); border-radius: 8px; padding: 24px; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
+  .modal h3 { margin-bottom: 16px; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+  @media print {
+    .topbar, .sidebar, .section.no-print, .add-custom, .service-tabs, .presets, .service-toggle, .service-controls, .breakdown-fund, .delete-svc-btn, .admin-config-box, .event-mgmt-add-btn { display: none !important; }
+    body { background: var(--white); }
+    .layout { grid-template-columns: 1fr; padding: 0; max-width: none; }
+    .section { box-shadow: none; border: none; padding: 0; margin-bottom: 16px; page-break-inside: avoid; }
+    .print-only { display: block !important; }
+  }
+  .print-only { display: none; }
+  .delete-svc-btn { background: transparent; border: 1px solid var(--red); color: var(--red); padding: 4px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; margin-top: 8px; }
+  .delete-svc-btn:hover { background: rgba(220,38,38,0.08); }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="brand"><span class="brand-mark"></span><span>HOUP · COTIZADOR</span></div>
+  <div class="actions">
+    <span class="admin-status locked" id="admin-status-pill">🔒 OPERADOR</span>
+    <button class="btn btn-secondary" onclick="toggleAdmin()" id="admin-toggle-btn">Modo admin</button>
+    <button class="btn btn-secondary admin-only-inline" onclick="restoreCatalogFromFile()">Restaurar catálogo</button>
+    <button class="btn btn-secondary" onclick="openSavedModal()">Guardadas</button>
+    <button class="btn btn-secondary" onclick="resetAll()">Nueva</button>
+    <button class="btn btn-primary" onclick="saveCotizacion()">Guardar</button>
+    <button class="btn btn-primary" onclick="window.print()">Imprimir / PDF</button>
+  </div>
+</div>
+
+<div class="layout">
+  <div class="main">
+    <div class="print-only" style="margin-bottom: 24px; padding-bottom: 12px; border-bottom: 2px solid var(--cyan);">
+      <div style="display:flex; justify-content: space-between; align-items: flex-end;">
+        <div>
+          <div style="color: var(--cyan); font-size: 11px; font-weight: bold; letter-spacing: 4px;">HOUP · COTIZACIÓN</div>
+          <h1 style="font-size: 32px; margin-top: 4px;" id="print-client-name">—</h1>
+          <div style="color: var(--grey); font-size: 12px; margin-top: 4px;" id="print-meta">—</div>
+        </div>
+        <div style="text-align: right; font-size: 11px; color: var(--grey);">
+          <div>Vigencia: 60 días</div>
+          <div id="print-date">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-eyebrow">01 · DATOS DEL CLIENTE</div>
+      <div class="section-title">Información básica</div>
+      <div class="section-sub">Estos datos aparecerán en la cotización impresa.</div>
+      <div class="field-row">
+        <div class="field"><label>Cliente / Organización</label><input type="text" id="client-name" placeholder="Ej. Harmony School" oninput="updatePrint()"></div>
+        <div class="field"><label>Contacto</label><input type="text" id="client-contact" placeholder="Ej. Adriana Riddle" oninput="updatePrint()"></div>
+      </div>
+      <div class="field-row three">
+        <div class="field"><label>Correo</label><input type="email" id="client-email" placeholder="contacto@ejemplo.com" oninput="updatePrint()"></div>
+        <div class="field"><label>Teléfono</label><input type="text" id="client-phone" placeholder="844 000 0000" oninput="updatePrint()"></div>
+        <div class="field"><label>Fecha</label><input type="date" id="quote-date" oninput="updatePrint()"></div>
+      </div>
+      <div class="field"><label>Notas o contexto del proyecto</label><textarea id="client-notes" placeholder="Contexto general, requerimientos especiales, notas internas..."></textarea></div>
+    </div>
+
+    <div class="section no-print">
+      <div class="section-eyebrow">02 · PRESETS DE PAQUETES (OPCIONAL)</div>
+      <div class="section-title">Estructura de paquete recomendada</div>
+      <div class="section-sub">Aplica un paquete base como punto de partida — luego puedes ajustar los servicios. El descuento se aplicará automáticamente.</div>
+      <div class="presets" id="presets"></div>
+      <div style="font-size: 11px; color: var(--grey); font-style: italic;">
+        Tip: También puedes ignorar los presets y armar la cotización a la medida — el descuento por volumen se aplicará automáticamente según el número de servicios contratados.
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-eyebrow">03 · CATÁLOGO DE SERVICIOS</div>
+      <div class="section-title">Selecciona los servicios contratados</div>
+      <div class="section-sub">Los precios son por persona — solo necesitas indicar el número de participantes. <span class="admin-only-inline">En modo admin puedes editar precios base y agregar nuevos servicios.</span></div>
+      <div class="service-tabs" id="tabs"></div>
+      <div id="service-list"></div>
+      <div id="event-mgmt-container"></div>
+      <div class="add-custom admin-only">
+        <div style="font-size: 12px; font-weight: bold; color: var(--cyan); margin-bottom: 10px; letter-spacing: 1px;">+ AGREGAR SERVICIO PERSONALIZADO</div>
+        <div class="add-custom-form">
+          <div class="field"><label>Nombre</label><input type="text" id="custom-name" placeholder="Servicio..."></div>
+          <div class="field"><label>Categoría</label><select id="custom-cat"><option>Educación</option><option>Empresas</option><option>Fundación</option><option>Personalizado</option></select></div>
+          <div class="field"><label>Precio por persona</label><input type="number" id="custom-price" placeholder="0" min="0"></div>
+          <div class="field"><label>Detalle</label><input type="text" id="custom-detail" placeholder="Descripción breve"></div>
+          <button class="btn btn-ghost" onclick="addCustomServiceToCatalog()">Agregar</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-eyebrow">04 · VIÁTICOS Y AJUSTES</div>
+      <div class="section-title">Costos adicionales</div>
+      <div class="section-sub">Aplica solo si la sede del cliente requiere viaje fuera del área de influencia HOUP.</div>
+      <div class="field-row three">
+        <div class="field"><label>Tipo de zona</label><select id="travel-zone" onchange="updateTotals()"><option value="local">Área HOUP (Mty/Saltillo) · sin costo</option><option value="travel">Viaje sencillo · sin hospedaje</option><option value="travel-stay">Viaje + hospedaje</option></select></div>
+        <div class="field"><label># Sesiones con desplazamiento</label><input type="number" id="travel-trips" min="0" value="0" oninput="updateTotals()"></div>
+        <div class="field"><label>Costo por sesión con viaje (MXN)</label><input type="number" id="travel-cost" min="0" value="0" oninput="updateTotals()"></div>
+      </div>
+      <div class="field-row three" style="margin-top: 14px;">
+        <div class="field"><label>Descuento manual override (%)</label><input type="number" id="manual-discount" min="0" max="50" value="0" oninput="updateTotals()"></div>
+        <div class="field"><label>Aplica IVA a servicios HOUP</label><select id="apply-iva" onchange="updateTotals()"><option value="yes">Sí — Servicios HOUP + IVA 16%</option><option value="no">No — Servicios HOUP netos</option></select></div>
+        <div class="field"><label>Forma de pago sugerida</label><input type="text" id="payment-terms" value="50% al confirmar · 50% contra entrega de cada componente"></div>
+      </div>
+    </div>
+
+    <div class="print-only section">
+      <div class="section-eyebrow">RESUMEN DE INVERSIÓN</div>
+      <div class="section-title">Detalle de la propuesta</div>
+      <div id="print-summary"></div>
+    </div>
+  </div>
+
+  <div class="sidebar no-print">
+    <div class="summary">
+      <h3>RESUMEN EN VIVO</h3>
+      <div class="summary-title">Cotización</div>
+      <div id="volume-info-live"></div>
+      <div class="selected-list" id="selected-list"><div class="empty-msg">Aún no has seleccionado servicios.</div></div>
+      <div class="totals" id="totals">
+        <div class="totals-row"><span>Subtotal servicios HOUP</span><span class="amount" id="subtotal">$0</span></div>
+        <div class="totals-row discount" id="row-vol-disc" style="display:none;"><span id="vol-disc-label">Descuento por volumen</span><span class="amount" id="vol-disc-amount">−$0</span></div>
+        <div class="totals-row discount" id="row-manual-disc" style="display:none;"><span id="manual-disc-label">Descuento manual</span><span class="amount" id="manual-disc-amount">−$0</span></div>
+        <div class="totals-row" id="row-travel" style="display:none;"><span>Viáticos</span><span class="amount" id="travel-amount">$0</span></div>
+        <div class="totals-row" id="row-iva" style="display:none;"><span>IVA 16% (sobre servicios HOUP)</span><span class="amount" id="iva-amount">$0</span></div>
+        <div class="totals-row event-mgmt" id="row-event-mgmt" style="display:none;"><span>HOUP Event Management <small style="display:block;font-size:10px;opacity:0.8;">(impuestos del lugar incluidos)</small></span><span class="amount" id="event-mgmt-amount">$0</span></div>
+        <div class="totals-row grand"><span>TOTAL</span><span class="amount" id="grand-total">$0</span></div>
+      </div>
+      <div class="summary-actions">
+        <button class="btn btn-primary" onclick="window.print()">Imprimir / Exportar PDF</button>
+        <button class="btn btn-ghost" onclick="saveCotizacion()">Guardar cotización</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="saved-modal">
+  <div class="modal">
+    <h3>Cotizaciones guardadas</h3>
+    <div id="saved-list-modal" class="saved-list"><div class="empty-msg">No hay cotizaciones guardadas.</div></div>
+    <div class="modal-actions"><button class="btn" style="color:black;border:1px solid #ccc;background:white;" onclick="closeSavedModal()">Cerrar</button></div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="admin-modal">
+  <div class="modal">
+    <h3>Modo administrador</h3>
+    <p style="font-size: 13px; color: var(--grey); margin-bottom: 16px;">Introduce la contraseña maestra para desbloquear edición de precios y catálogo.</p>
+    <input type="password" id="admin-password" placeholder="Contraseña" style="width: 100%; padding: 12px;" onkeypress="if(event.key==='Enter') submitAdminPassword()">
+    <div id="admin-error" style="color: var(--red); font-size: 12px; margin-top: 8px; display: none;">Contraseña incorrecta.</div>
+    <div class="modal-actions">
+      <button class="btn" style="color:black;border:1px solid #ccc;background:white;" onclick="closeAdminModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="submitAdminPassword()">Desbloquear</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const ADMIN_PASSWORD = "houp2026";
+
+// Cuando se hagan cambios al SERVICES_CATALOG, incrementa este número.
+// Esto invalida el cache del navegador y carga el nuevo catálogo del archivo.
+const CATALOG_VERSION = 6;
+
+// SERVICIOS — modelo flexible:
+// type "standard" = precio por persona
+// type "flat" = precio fijo (no escala con personas, ej. conferencia, mailing)
+// type "fundacion-programa" = estructura especial Fundación (turnos + ayudante + manuales)
+// type "session-package" = paquete de N sesiones nombradas, operador elige cuáles, descuento al tomar todas
+// type "multi-stage" = proceso de etapas (cultura organizacional)
+
+const SERVICES_CATALOG = [
+  // --- EDUCACIÓN ---
+  { id: "edu-cap-doc", cat: "Educación", name: "Capacitación a docentes en psicología positiva", detail: "Curso introductorio basado en Discovering Positive Education", type: "standard", pricePerPerson: 0 },
+  { id: "edu-conf-fam", cat: "Educación", name: "Conferencia general a familias", detail: "Conferencia presencial de alineación + sensibilización · cobro fijo, no escala con asistentes", type: "flat", flatPrice: 0, unitLabel: "por conferencia" },
+  { id: "edu-mailing", cat: "Educación", name: "Mailing campaign a familias", detail: "Boletín de sensibilización en psicología positiva · cobro por correo enviado", type: "mailing", pricePerEmail: 0, defaultEmailsPerMonth: 1, defaultMonths: 10 },
+  {
+    id: "edu-int-gen",
+    cat: "Educación",
+    name: "Sesiones de integración por generación",
+    detail: "Talleres vivenciales de 4h por generación · selecciona las que aplican y ajusta # de personas en cada una",
+    type: "generation-sessions",
+    generations: [
+      { id: "g5", label: "5° de primaria", pricePerPerson: 0 },
+      { id: "g6", label: "6° de primaria", pricePerPerson: 0 },
+      { id: "g7", label: "7° (1° de secundaria)", pricePerPerson: 0 },
+      { id: "g8", label: "8° (2° de secundaria)", pricePerPerson: 0 },
+      { id: "g9", label: "9° · cierre de generación · sello distintivo HOUP", pricePerPerson: 0 }
+    ]
+  },
+  { id: "edu-fam-padre-hijo", cat: "Educación", name: "Retiro familiar — 5° primaria (padre · hijo)", detail: "Hito de integración familiar para 5° de primaria", type: "standard", pricePerPerson: 0 },
+  { id: "edu-fam-madre-hijo", cat: "Educación", name: "Retiro familiar — 6° primaria (madre · hijo)", detail: "Hito de integración familiar para cierre de primaria", type: "standard", pricePerPerson: 0 },
+  { id: "edu-fam-toda", cat: "Educación", name: "Retiro familiar — 7° secundaria (toda la familia)", detail: "Hito de integración familiar para entrada a secundaria", type: "standard", pricePerPerson: 0 },
+
+  // --- EMPRESAS ---
+  {
+    id: "emp-alto-rendimiento", cat: "Empresas",
+    name: "Desarrollo de equipos de alto rendimiento",
+    detail: "Programa de 4 sesiones · 1 por quarter · Metodología 3C's · 10% de descuento al contratar las 4 sesiones",
+    type: "session-package",
+    pricePerSession: 0,
+    bundleDiscountPct: 10,
+    sessions: [
+      { id: "intro-3c", label: "Sesión 1 · Introducción a las 3C's" },
+      { id: "claridad", label: "Sesión 2 · Claridad" },
+      { id: "confianza", label: "Sesión 3 · Confianza" },
+      { id: "confrontacion", label: "Sesión 4 · Confrontación" }
+    ]
+  },
+  {
+    id: "emp-desarrollo-org", cat: "Empresas",
+    name: "Sesiones de desarrollo organizacional",
+    detail: "Mediación con equipos directivos · planeación estratégica, cultura, alineación · HOUP funge como facilitador. Cotiza por # de sesiones.",
+    type: "standard-sessions",
+    pricePerSession: 0,
+    bundleSize: 4,
+    bundleDiscountPct: 10
+  },
+  {
+    id: "emp-cultura", cat: "Empresas",
+    name: "Fortalecimiento de cultura organizacional",
+    detail: "Proceso de 5 etapas · cada etapa puede ser precio fijo o por # de sesiones",
+    type: "multi-stage",
+    stages: [
+      {
+        id: "et1-medicion",
+        label: "Etapa 1 · Medición clima laboral y cultura predominante",
+        desc: "Entrevistas, focus groups y encuesta de clima para entender al equipo, identificar tensiones y mapear oportunidades culturales.",
+        flatPrice: 0,
+        pricePerSession: 0
+      },
+      {
+        id: "et2-claridad",
+        label: "Etapa 2 · Sesiones de Claridad",
+        desc: "Alineación del equipo directivo en propósito, visión y lenguaje cultural · definición de mensajes y conductas a modelar desde arriba.",
+        flatPrice: 0,
+        pricePerSession: 0
+      },
+      {
+        id: "et3-confianza",
+        label: "Etapa 3 · Sesiones de Confianza + Confrontación",
+        desc: "Entrenamiento a gerentes y supervisores en liderazgo humano, conversaciones difíciles y construcción de acuerdos · multiplicadores culturales.",
+        flatPrice: 0,
+        pricePerSession: 0
+      },
+      {
+        id: "et4-permeacion",
+        label: "Etapa 4 · Taller de permeación de cultura",
+        desc: "Talleres vivenciales con personal operativo · construcción de identidad, orgullo y pertenencia. Capacita a gerentes para impartirlos.",
+        flatPrice: 0,
+        pricePerSession: 0
+      },
+      {
+        id: "et5-seguimiento",
+        label: "Etapa 5 · Seguimiento y cierre cultural",
+        desc: "Manuales por etapa (claridad, confianza, confrontación, permeación) + juntas de acompañamiento con dirección y gerentes.",
+        flatPrice: 0,
+        pricePerSession: 0
+      }
+    ]
+  },
+  { id: "emp-teambuild", cat: "Empresas", name: "Team building con sentido (sesión aislada)", detail: "Outsourcing de eventos pre-establecidos por la empresa · HOUP dirige la experiencia con propósito", type: "standard", pricePerPerson: 0 },
+
+  // --- FUNDACIÓN ---
+  { id: "fun-programa", cat: "Fundación", name: "Programa de bienestar socioemocional", detail: "Sesiones semanales 40-50min · escala con turnos, # alumnos y meses", type: "fundacion-programa", docenteUnTurnoMensual: 12000, docenteDosTurnosMensual: 18000, ayudanteMensual: 0, manualPorAlumno: 0, mesesPorDefecto: 10 },
+  { id: "fun-cap-doc", cat: "Fundación", name: "Capacitación a docentes", detail: "Capacitación en psicología positiva a docentes de la escuela vulnerable", type: "standard", pricePerPerson: 0 },
+  { id: "fun-voluntariado", cat: "Fundación", name: "Voluntariado corporativo", detail: "HOUP organiza experiencia de voluntariado para empleados de empresas", type: "standard", pricePerPerson: 0 }
+];
+
+const PRESETS = [
+  { id: "esencial", tag: "ESENCIAL", name: "El arranque", desc: "Capacitación docente + conferencia a padres + mailing 1×/mes.", services: ["edu-cap-doc", "edu-conf-fam", "edu-mailing"], discountPct: 0, mailingEmailsPerMonth: 1 },
+  { id: "integral", tag: "INTEGRAL", name: "El más elegido", desc: "Esencial + sesiones de integración por generación.", services: ["edu-cap-doc", "edu-conf-fam", "edu-mailing", "edu-int-gen"], discountPct: 8, mailingEmailsPerMonth: 1 },
+  { id: "completo", tag: "COMPLETO", name: "Plan integrador", desc: "Todos los componentes: integración por generación + retiros familiares · mailing 2×/mes.", services: ["edu-cap-doc", "edu-conf-fam", "edu-mailing", "edu-int-gen", "edu-fam-padre-hijo", "edu-fam-madre-hijo", "edu-fam-toda"], discountPct: 16, mailingEmailsPerMonth: 2 }
+];
+
+const VOLUME_DISCOUNTS = [
+  { minServices: 10, pct: 18, label: "10+ servicios" },
+  { minServices: 8, pct: 15, label: "8+ servicios" },
+  { minServices: 5, pct: 10, label: "5+ servicios" }
+];
+
+const EVENT_MGMT_FEE_DEFAULT = 15;
+
+let state = {
+  filterCat: "Todos",
+  selected: {},
+  presetApplied: null,
+  adminMode: false,
+  catalog: JSON.parse(JSON.stringify(SERVICES_CATALOG)),
+  eventMgmt: { enabled: false, venueName: "", venueCost: 0, feePct: EVENT_MGMT_FEE_DEFAULT }
+};
+
+function init() {
+  document.getElementById("quote-date").valueAsDate = new Date();
+  loadCatalogFromStorage();
+  renderTabs();
+  renderPresets();
+  renderServices();
+  renderEventMgmt();
+  renderVolumeInfo();
+  updateTotals();
+}
+
+// ==================== ADMIN MODE ====================
+function toggleAdmin() {
+  if (state.adminMode) {
+    state.adminMode = false;
+    document.body.classList.remove("admin-mode");
+    document.getElementById("admin-status-pill").className = "admin-status locked";
+    document.getElementById("admin-status-pill").textContent = "🔒 OPERADOR";
+    document.getElementById("admin-toggle-btn").textContent = "Modo admin";
+    renderServices();
+    renderEventMgmt();
+  } else {
+    document.getElementById("admin-modal").classList.add("show");
+    document.getElementById("admin-password").value = "";
+    document.getElementById("admin-error").style.display = "none";
+    setTimeout(() => document.getElementById("admin-password").focus(), 100);
+  }
+}
+function submitAdminPassword() {
+  const pwd = document.getElementById("admin-password").value;
+  if (pwd === ADMIN_PASSWORD) {
+    state.adminMode = true;
+    document.body.classList.add("admin-mode");
+    document.getElementById("admin-status-pill").className = "admin-status unlocked";
+    document.getElementById("admin-status-pill").textContent = "🔓 ADMIN";
+    document.getElementById("admin-toggle-btn").textContent = "Salir admin";
+    document.getElementById("admin-modal").classList.remove("show");
+    renderServices();
+    renderEventMgmt();
+  } else {
+    document.getElementById("admin-error").style.display = "block";
+  }
+}
+function closeAdminModal() { document.getElementById("admin-modal").classList.remove("show"); }
+
+// ==================== TABS ====================
+function renderTabs() {
+  const cats = ["Todos", ...new Set(state.catalog.map(s => s.cat))];
+  document.getElementById("tabs").innerHTML = cats.map(cat => `<div class="tab ${state.filterCat === cat ? 'active' : ''}" onclick="setFilter('${cat}')">${cat}</div>`).join("");
+}
+function setFilter(cat) {
+  state.filterCat = cat;
+  renderTabs();
+  renderServices();
+  renderEventMgmt();
+}
+
+// ==================== SERVICES RENDER ====================
+function renderServices() {
+  const filtered = state.filterCat === "Todos" ? state.catalog : state.catalog.filter(s => s.cat === state.filterCat);
+  document.getElementById("service-list").innerHTML = filtered.map(svc => renderServiceCard(svc)).join("");
+}
+
+function renderServiceCard(svc) {
+  const sel = state.selected[svc.id];
+  const isSelected = !!sel;
+  const lineTotal = isSelected ? calcServiceTotal(svc, sel) : 0;
+
+  // ==== FUNDACIÓN PROGRAMA (estructura especial) ====
+  if (svc.type === "fundacion-programa") {
+    const cfg = sel || { alumnos: 30, meses: svc.mesesPorDefecto || 10, turnos: "matutino", docenteCompartido: true, incluirAyudante: false, incluirManuales: true };
+    return `
+      <div class="service-card ${isSelected ? 'selected' : ''}">
+        ${cardHead(svc, isSelected)}
+        <div class="admin-only admin-config-box">
+          <div class="admin-config-label">CONFIG BASE (ADMIN)</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+            <div class="field"><label>Sueldo docente · 1 turno (mensual)</label><input type="number" min="0" value="${svc.docenteUnTurnoMensual}" onchange="updateCatalogField('${svc.id}', 'docenteUnTurnoMensual', this.value)"></div>
+            <div class="field"><label>Sueldo docente · 2 turnos (mensual)</label><input type="number" min="0" value="${svc.docenteDosTurnosMensual}" onchange="updateCatalogField('${svc.id}', 'docenteDosTurnosMensual', this.value)"></div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            <div class="field"><label>Sueldo ayudante (mensual)</label><input type="number" min="0" value="${svc.ayudanteMensual}" onchange="updateCatalogField('${svc.id}', 'ayudanteMensual', this.value)"></div>
+            <div class="field"><label>Manual por alumno</label><input type="number" min="0" value="${svc.manualPorAlumno}" onchange="updateCatalogField('${svc.id}', 'manualPorAlumno', this.value)"></div>
+          </div>
+          <button class="delete-svc-btn" onclick="deleteServiceFromCatalog('${svc.id}')">Eliminar servicio del catálogo</button>
+        </div>
+        ${isSelected ? `
+        <div class="service-controls" style="grid-template-columns: 1fr 1fr 1fr 1fr;">
+          <div class="field"><label>Turnos contratados</label><select onchange="updateSelectedField('${svc.id}', 'turnos', this.value)">
+            <option value="matutino" ${cfg.turnos === 'matutino' ? 'selected' : ''}>Solo matutino</option>
+            <option value="vespertino" ${cfg.turnos === 'vespertino' ? 'selected' : ''}>Solo vespertino</option>
+            <option value="ambos" ${cfg.turnos === 'ambos' ? 'selected' : ''}>Matutino + Vespertino</option>
+          </select></div>
+          ${cfg.turnos === 'ambos' ? `
+          <div class="field"><label>¿1 docente para ambos?</label><select onchange="updateSelectedField('${svc.id}', 'docenteCompartido', this.value === 'yes')">
+            <option value="yes" ${cfg.docenteCompartido ? 'selected' : ''}>Sí (compartido)</option>
+            <option value="no" ${!cfg.docenteCompartido ? 'selected' : ''}>No (2 docentes)</option>
+          </select></div>` : '<div></div>'}
+          <div class="field"><label># Alumnos (total)</label><input type="number" min="1" value="${cfg.alumnos}" onchange="updateSelectedField('${svc.id}', 'alumnos', this.value)"></div>
+          <div class="field"><label># Meses</label><input type="number" min="1" max="12" value="${cfg.meses}" onchange="updateSelectedField('${svc.id}', 'meses', this.value)"></div>
+        </div>
+        <div class="service-controls" style="grid-template-columns: 1fr 1fr; margin-top: 8px;">
+          <div class="field"><label>Incluir ayudante</label><select onchange="updateSelectedField('${svc.id}', 'incluirAyudante', this.value === 'yes')">
+            <option value="no" ${!cfg.incluirAyudante ? 'selected' : ''}>No</option>
+            <option value="yes" ${cfg.incluirAyudante ? 'selected' : ''}>Sí</option>
+          </select></div>
+          <div class="field"><label>Incluir manuales</label><select onchange="updateSelectedField('${svc.id}', 'incluirManuales', this.value === 'yes')">
+            <option value="yes" ${cfg.incluirManuales !== false ? 'selected' : ''}>Sí</option>
+            <option value="no" ${cfg.incluirManuales === false ? 'selected' : ''}>No</option>
+          </select></div>
+        </div>
+        <div class="breakdown-fund">
+          <div><span class="lbl">Docente${cfg.turnos === 'ambos' && !cfg.docenteCompartido ? ' (×2)' : ''}</span><span class="val">${formatMoney(calcDocenteCost(svc, cfg))}</span></div>
+          <div><span class="lbl">Ayudante</span><span class="val">${cfg.incluirAyudante ? formatMoney(svc.ayudanteMensual * cfg.meses) : '—'}</span></div>
+          <div><span class="lbl">Manuales</span><span class="val">${cfg.incluirManuales !== false ? formatMoney(svc.manualPorAlumno * cfg.alumnos) : '—'}</span></div>
+        </div>
+        <div class="service-line-total"><span class="label">SUBTOTAL DEL SERVICIO</span>${formatMoney(lineTotal)}</div>
+        ` : ''}
+      </div>`;
+  }
+
+  // ==== FLAT (precio fijo, no escala con personas) ====
+  if (svc.type === "flat") {
+    const cfg = sel || { eventos: 1 };
+    const unit = svc.unitLabel || "por evento";
+    return `
+      <div class="service-card ${isSelected ? 'selected' : ''}">
+        ${cardHead(svc, isSelected)}
+        <div class="admin-only admin-config-box">
+          <div class="admin-config-label">CONFIG BASE (ADMIN)</div>
+          <div class="field"><label>Precio fijo (${unit}) MXN</label><input type="number" min="0" value="${svc.flatPrice}" onchange="updateCatalogField('${svc.id}', 'flatPrice', this.value)"></div>
+          <button class="delete-svc-btn" onclick="deleteServiceFromCatalog('${svc.id}')">Eliminar servicio del catálogo</button>
+        </div>
+        ${isSelected ? `
+        <div class="service-controls" style="grid-template-columns: 1fr 1fr 1fr;">
+          <div class="field"><label># Eventos</label><input type="number" min="1" value="${cfg.eventos}" onchange="updateSelectedField('${svc.id}', 'eventos', this.value)"></div>
+          <div class="field" style="opacity: 0.7;"><label>Precio ${unit}</label><input type="text" value="${formatMoney(svc.flatPrice)}" disabled></div>
+          <div class="field" style="opacity: 0.7;"><label>Total</label><input type="text" value="${formatMoney(lineTotal)}" disabled></div>
+        </div>
+        <div class="service-line-total"><span class="label">SUBTOTAL DEL SERVICIO</span>${formatMoney(lineTotal)}</div>
+        ` : ''}
+      </div>`;
+  }
+
+  // ==== MAILING (correos × meses) ====
+  if (svc.type === "mailing") {
+    const cfg = sel || { emailsPerMonth: svc.defaultEmailsPerMonth || 1, months: svc.defaultMonths || 10 };
+    const totalEmails = (cfg.emailsPerMonth || 1) * (cfg.months || 10);
+    return `
+      <div class="service-card ${isSelected ? 'selected' : ''}">
+        ${cardHead(svc, isSelected)}
+        <div class="admin-only admin-config-box">
+          <div class="admin-config-label">CONFIG BASE (ADMIN)</div>
+          <div class="field"><label>Precio por correo enviado (MXN)</label><input type="number" min="0" value="${svc.pricePerEmail}" onchange="updateCatalogField('${svc.id}', 'pricePerEmail', this.value)"></div>
+          <button class="delete-svc-btn" onclick="deleteServiceFromCatalog('${svc.id}')">Eliminar servicio del catálogo</button>
+        </div>
+        ${isSelected ? `
+        <div class="service-controls" style="grid-template-columns: 1fr 1fr 1fr;">
+          <div class="field"><label>Correos por mes</label><select onchange="updateSelectedField('${svc.id}', 'emailsPerMonth', this.value)">
+            <option value="1" ${cfg.emailsPerMonth === 1 ? 'selected' : ''}>1 al mes (mensual)</option>
+            <option value="2" ${cfg.emailsPerMonth === 2 ? 'selected' : ''}>2 al mes (cada 15 días)</option>
+            <option value="4" ${cfg.emailsPerMonth === 4 ? 'selected' : ''}>4 al mes (semanal)</option>
+          </select></div>
+          <div class="field"><label># Meses de campaña</label><input type="number" min="1" max="12" value="${cfg.months}" onchange="updateSelectedField('${svc.id}', 'months', this.value)"></div>
+          <div class="field" style="opacity: 0.7;"><label>Total correos</label><input type="text" value="${totalEmails} correos" disabled></div>
+        </div>
+        <div class="service-line-total"><span class="label">SUBTOTAL · ${totalEmails} correos × ${formatMoney(svc.pricePerEmail)}</span>${formatMoney(lineTotal)}</div>
+        ` : ''}
+      </div>`;
+  }
+
+  // ==== SESSION PACKAGE (paquete de sesiones nombradas, descuento al tomar todas) ====
+  if (svc.type === "session-package") {
+    const cfg = sel || { selectedSessions: svc.sessions.map(s => s.id) };
+    const numSelected = (cfg.selectedSessions || []).length;
+    const isFullBundle = numSelected === svc.sessions.length;
+    const subtotalSinDesc = (svc.pricePerSession || 0) * numSelected;
+    return `
+      <div class="service-card ${isSelected ? 'selected' : ''}">
+        ${cardHead(svc, isSelected)}
+        <div class="admin-only admin-config-box">
+          <div class="admin-config-label">CONFIG BASE (ADMIN)</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            <div class="field"><label>Precio por sesión (MXN)</label><input type="number" min="0" value="${svc.pricePerSession}" onchange="updateCatalogField('${svc.id}', 'pricePerSession', this.value)"></div>
+            <div class="field"><label>Descuento al tomar las ${svc.sessions.length} (%)</label><input type="number" min="0" max="50" value="${svc.bundleDiscountPct}" onchange="updateCatalogField('${svc.id}', 'bundleDiscountPct', this.value)"></div>
+          </div>
+          <button class="delete-svc-btn" onclick="deleteServiceFromCatalog('${svc.id}')">Eliminar servicio del catálogo</button>
+        </div>
+        ${isSelected ? `
+        <div style="padding: 10px 0; border-top: 1px dashed var(--border);">
+          <div style="font-size: 11px; font-weight: bold; color: var(--cyan); letter-spacing: 1px; margin-bottom: 8px;">SELECCIONA LAS SESIONES INCLUIDAS</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+            ${svc.sessions.map(sess => {
+              const checked = (cfg.selectedSessions || []).includes(sess.id);
+              return `<label style="display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: ${checked ? 'rgba(2,193,244,0.08)' : '#fff'}; border: 1px solid ${checked ? 'var(--cyan)' : 'var(--border)'}; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                <input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleSessionInPackage('${svc.id}', '${sess.id}', this.checked)" style="accent-color: var(--cyan);">
+                <span>${sess.label}</span>
+              </label>`;
+            }).join("")}
+          </div>
+          ${isFullBundle && svc.bundleDiscountPct > 0 ? `<div style="margin-top: 8px; padding: 8px; background: rgba(2,193,244,0.08); border-left: 3px solid var(--cyan); font-size: 11px; color: var(--black);"><strong style="color: var(--cyan);">✓ PAQUETE COMPLETO</strong> · Descuento del ${svc.bundleDiscountPct}% aplicado</div>` : ''}
+          ${!isFullBundle && numSelected > 0 ? `<div style="margin-top: 8px; padding: 8px; background: #fff8e6; border-left: 3px solid #f0c000; font-size: 11px; color: #8a6500;">${numSelected} de ${svc.sessions.length} sesiones · contrata todas para obtener ${svc.bundleDiscountPct}% de descuento</div>` : ''}
+        </div>
+        <div class="service-line-total">
+          ${isFullBundle && svc.bundleDiscountPct > 0 ? `<span style="font-size: 11px; color: var(--grey); text-decoration: line-through; margin-right: 8px;">${formatMoney(subtotalSinDesc)}</span>` : ''}
+          <span class="label">SUBTOTAL · ${numSelected} sesión${numSelected !== 1 ? 'es' : ''}</span>${formatMoney(lineTotal)}
+        </div>
+        ` : ''}
+      </div>`;
+  }
+
+  // ==== STANDARD SESSIONS (sesiones genéricas, descuento al alcanzar bundle) ====
+  if (svc.type === "standard-sessions") {
+    const cfg = sel || { numSessions: 1 };
+    const num = cfg.numSessions || 1;
+    const isFullBundle = svc.bundleSize && num >= svc.bundleSize;
+    const subtotalSinDesc = (svc.pricePerSession || 0) * num;
+    return `
+      <div class="service-card ${isSelected ? 'selected' : ''}">
+        ${cardHead(svc, isSelected)}
+        <div class="admin-only admin-config-box">
+          <div class="admin-config-label">CONFIG BASE (ADMIN)</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+            <div class="field"><label>Precio por sesión (MXN)</label><input type="number" min="0" value="${svc.pricePerSession}" onchange="updateCatalogField('${svc.id}', 'pricePerSession', this.value)"></div>
+            <div class="field"><label>Tamaño paquete</label><input type="number" min="1" value="${svc.bundleSize}" onchange="updateCatalogField('${svc.id}', 'bundleSize', this.value)"></div>
+            <div class="field"><label>Descuento paquete (%)</label><input type="number" min="0" max="50" value="${svc.bundleDiscountPct}" onchange="updateCatalogField('${svc.id}', 'bundleDiscountPct', this.value)"></div>
+          </div>
+          <button class="delete-svc-btn" onclick="deleteServiceFromCatalog('${svc.id}')">Eliminar servicio del catálogo</button>
+        </div>
+        ${isSelected ? `
+        <div class="service-controls" style="grid-template-columns: 1fr 1fr 1fr;">
+          <div class="field"><label># Sesiones</label><input type="number" min="1" value="${num}" onchange="updateSelectedField('${svc.id}', 'numSessions', this.value)"></div>
+          <div class="field" style="opacity: 0.7;"><label>Precio por sesión</label><input type="text" value="${formatMoney(svc.pricePerSession)}" disabled></div>
+          <div class="field" style="opacity: 0.7;"><label>Subtotal</label><input type="text" value="${formatMoney(lineTotal)}" disabled></div>
+        </div>
+        ${isFullBundle && svc.bundleDiscountPct > 0 ? `<div style="margin-top: 8px; padding: 8px; background: rgba(2,193,244,0.08); border-left: 3px solid var(--cyan); font-size: 11px; color: var(--black);"><strong style="color: var(--cyan);">✓ PAQUETE</strong> · ${num} sesiones · descuento del ${svc.bundleDiscountPct}% aplicado</div>` : ''}
+        ${!isFullBundle && svc.bundleSize > 0 ? `<div style="margin-top: 8px; padding: 8px; background: #fff8e6; border-left: 3px solid #f0c000; font-size: 11px; color: #8a6500;">Contrata ${svc.bundleSize}+ sesiones para obtener ${svc.bundleDiscountPct}% de descuento</div>` : ''}
+        <div class="service-line-total">
+          ${isFullBundle && svc.bundleDiscountPct > 0 ? `<span style="font-size: 11px; color: var(--grey); text-decoration: line-through; margin-right: 8px;">${formatMoney(subtotalSinDesc)}</span>` : ''}
+          <span class="label">SUBTOTAL DEL SERVICIO</span>${formatMoney(lineTotal)}
+        </div>
+        ` : ''}
+      </div>`;
+  }
+
+  // ==== MULTI STAGE (proceso de etapas, cada una con modo flat o sessions) ====
+  if (svc.type === "multi-stage") {
+    const cfg = sel || { stages: {} };
+    return `
+      <div class="service-card ${isSelected ? 'selected' : ''}">
+        ${cardHead(svc, isSelected)}
+        <div class="admin-only admin-config-box">
+          <div class="admin-config-label">CONFIG BASE (ADMIN) · PRECIOS POR ETAPA</div>
+          ${svc.stages.map((st, idx) => `
+            <div style="margin-bottom: 12px; padding: 8px; background: rgba(255,255,255,0.5); border-radius: 4px;">
+              <div style="font-size: 11px; font-weight: bold; color: #8a6500; margin-bottom: 6px;">${st.label}</div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                <div class="field"><label>Precio fijo (MXN)</label><input type="number" min="0" value="${st.flatPrice}" onchange="updateStageCatalogField('${svc.id}', '${st.id}', 'flatPrice', this.value)"></div>
+                <div class="field"><label>Precio por sesión (MXN)</label><input type="number" min="0" value="${st.pricePerSession}" onchange="updateStageCatalogField('${svc.id}', '${st.id}', 'pricePerSession', this.value)"></div>
+              </div>
+            </div>
+          `).join("")}
+          <button class="delete-svc-btn" onclick="deleteServiceFromCatalog('${svc.id}')">Eliminar servicio del catálogo</button>
+        </div>
+        ${isSelected ? `
+        <div style="padding-top: 10px; border-top: 1px dashed var(--border);">
+          <div style="font-size: 11px; font-weight: bold; color: var(--cyan); letter-spacing: 1px; margin-bottom: 10px;">SELECCIONA Y CONFIGURA ETAPAS</div>
+          ${svc.stages.map(st => {
+            const stCfg = (cfg.stages && cfg.stages[st.id]) || { enabled: false, mode: "flat", sessions: 1 };
+            const stTotal = stCfg.enabled ? (stCfg.mode === "sessions" ? (st.pricePerSession || 0) * (stCfg.sessions || 1) : (st.flatPrice || 0)) : 0;
+            return `
+              <div style="margin-bottom: 10px; padding: 12px; background: ${stCfg.enabled ? 'rgba(2,193,244,0.05)' : '#fff'}; border: 1px solid ${stCfg.enabled ? 'var(--cyan)' : 'var(--border)'}; border-radius: 6px;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
+                  <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; flex: 1;">
+                    <input type="checkbox" ${stCfg.enabled ? 'checked' : ''} onchange="toggleStageInMultiStage('${svc.id}', '${st.id}', this.checked)" style="margin-top: 3px; accent-color: var(--cyan); width: 18px; height: 18px;">
+                    <div>
+                      <div style="font-weight: 600; font-size: 13px;">${st.label}</div>
+                      <div style="font-size: 11px; color: var(--grey); margin-top: 3px; line-height: 1.4;">${st.desc}</div>
+                    </div>
+                  </label>
+                  ${stCfg.enabled ? `<div style="font-weight: bold; color: var(--cyan); font-size: 13px; white-space: nowrap;">${formatMoney(stTotal)}</div>` : ''}
+                </div>
+                ${stCfg.enabled ? `
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 10px; padding-top: 8px; border-top: 1px dashed #ddd;">
+                  <div class="field"><label>Modo</label><select onchange="updateStageField('${svc.id}', '${st.id}', 'mode', this.value)">
+                    <option value="flat" ${stCfg.mode === 'flat' ? 'selected' : ''}>Precio fijo</option>
+                    <option value="sessions" ${stCfg.mode === 'sessions' ? 'selected' : ''}>Por # sesiones</option>
+                  </select></div>
+                  ${stCfg.mode === "sessions" ? `
+                    <div class="field"><label># Sesiones</label><input type="number" min="1" value="${stCfg.sessions}" onchange="updateStageField('${svc.id}', '${st.id}', 'sessions', this.value)"></div>
+                    <div class="field" style="opacity: 0.7;"><label>Precio/sesión</label><input type="text" value="${formatMoney(st.pricePerSession)}" disabled></div>
+                  ` : `
+                    <div class="field" style="opacity: 0.7;"><label>Precio fijo</label><input type="text" value="${formatMoney(st.flatPrice)}" disabled></div>
+                    <div></div>
+                  `}
+                </div>
+                ` : ''}
+              </div>
+            `;
+          }).join("")}
+        </div>
+        <div class="service-line-total"><span class="label">SUBTOTAL DEL PROCESO</span>${formatMoney(lineTotal)}</div>
+        ` : ''}
+      </div>`;
+  }
+
+  // ==== GENERATION SESSIONS (grupo de sesiones por generación, cada una con personas independientes) ====
+  if (svc.type === "generation-sessions") {
+    const cfg = sel || { generations: {} };
+    return `
+      <div class="service-card ${isSelected ? 'selected' : ''}">
+        ${cardHead(svc, isSelected)}
+        <div class="admin-only admin-config-box">
+          <div class="admin-config-label">CONFIG BASE (ADMIN) · PRECIO POR PERSONA POR GENERACIÓN</div>
+          ${svc.generations.map(g => `
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 8px; align-items: end; margin-bottom: 6px;">
+              <div class="field"><label>${g.label}</label><input type="number" min="0" value="${g.pricePerPerson}" onchange="updateGenerationCatalogField('${svc.id}', '${g.id}', 'pricePerPerson', this.value)"></div>
+            </div>
+          `).join("")}
+          <button class="delete-svc-btn" onclick="deleteServiceFromCatalog('${svc.id}')">Eliminar servicio del catálogo</button>
+        </div>
+        ${isSelected ? `
+        <div style="padding-top: 10px; border-top: 1px dashed var(--border);">
+          <div style="font-size: 11px; font-weight: bold; color: var(--cyan); letter-spacing: 1px; margin-bottom: 10px;">SELECCIONA GENERACIONES Y AJUSTA # PERSONAS</div>
+          ${svc.generations.map(g => {
+            const gCfg = (cfg.generations && cfg.generations[g.id]) || { enabled: false, personas: 30 };
+            const gTotal = gCfg.enabled ? (g.pricePerPerson || 0) * (gCfg.personas || 0) : 0;
+            return `
+              <div style="margin-bottom: 8px; padding: 10px 12px; background: ${gCfg.enabled ? 'rgba(2,193,244,0.06)' : '#fff'}; border: 1px solid ${gCfg.enabled ? 'var(--cyan)' : 'var(--border)'}; border-radius: 6px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                  <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; flex: 1; min-width: 0;">
+                    <input type="checkbox" ${gCfg.enabled ? 'checked' : ''} onchange="toggleGenerationInGroup('${svc.id}', '${g.id}', this.checked)" style="accent-color: var(--cyan); width: 18px; height: 18px; flex-shrink: 0;">
+                    <div style="min-width: 0; flex: 1;">
+                      <div style="font-weight: 600; font-size: 13px;">${g.label}</div>
+                      <div style="font-size: 10.5px; color: var(--grey); margin-top: 1px;">${formatMoney(g.pricePerPerson)} por persona</div>
+                    </div>
+                  </label>
+                  ${gCfg.enabled ? `
+                    <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
+                      <label style="font-size: 10px; color: var(--grey); margin: 0;"># personas</label>
+                      <input type="number" min="1" value="${gCfg.personas}" onchange="updateGenerationField('${svc.id}', '${g.id}', 'personas', this.value)" style="width: 70px; padding: 5px 7px; font-size: 12px; text-align: center;">
+                      <div style="font-weight: bold; color: var(--cyan); font-size: 13px; min-width: 90px; text-align: right;">${formatMoney(gTotal)}</div>
+                    </div>
+                  ` : ''}
+                </div>
+              </div>
+            `;
+          }).join("")}
+        </div>
+        <div class="service-line-total"><span class="label">SUBTOTAL DEL SERVICIO</span>${formatMoney(lineTotal)}</div>
+        ` : ''}
+      </div>`;
+  }
+
+  // ==== STANDARD service (precio por persona) ====
+  const cfg = sel || { personas: 30 };
+  return `
+    <div class="service-card ${isSelected ? 'selected' : ''}">
+      ${cardHead(svc, isSelected)}
+      <div class="admin-only admin-config-box">
+        <div class="admin-config-label">CONFIG BASE (ADMIN)</div>
+        <div class="field"><label>Precio por persona (MXN)</label><input type="number" min="0" value="${svc.pricePerPerson}" onchange="updateCatalogField('${svc.id}', 'pricePerPerson', this.value)"></div>
+        <button class="delete-svc-btn" onclick="deleteServiceFromCatalog('${svc.id}')">Eliminar servicio del catálogo</button>
+      </div>
+      ${isSelected ? `
+      <div class="service-controls" style="grid-template-columns: 1fr 1fr 1fr;">
+        <div class="field"><label># Personas</label><input type="number" min="1" value="${cfg.personas}" onchange="updateSelectedField('${svc.id}', 'personas', this.value)"></div>
+        <div class="field" style="opacity: 0.7;"><label>Precio por persona</label><input type="text" value="${formatMoney(svc.pricePerPerson)}" disabled></div>
+        <div class="field" style="opacity: 0.7;"><label>Total del servicio</label><input type="text" value="${formatMoney(lineTotal)}" disabled></div>
+      </div>
+      <div class="service-line-total"><span class="label">SUBTOTAL DEL SERVICIO</span>${formatMoney(lineTotal)}</div>
+      ` : ''}
+    </div>`;
+}
+
+// Helper: header de la tarjeta (común a todos los tipos)
+function cardHead(svc, isSelected) {
+  return `
+    <div class="service-card-head">
+      <div class="service-card-info">
+        <div class="service-cat">${svc.cat.toUpperCase()}</div>
+        <div class="service-name">${svc.name}</div>
+        <div class="service-detail">${svc.detail}</div>
+      </div>
+      <div class="service-toggle"><input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleService('${svc.id}', this.checked)"></div>
+    </div>`;
+}
+
+// Helper: actualizar campo dentro de una etapa de multi-stage en el catálogo (admin)
+function updateStageCatalogField(svcId, stageId, field, value) {
+  const svc = state.catalog.find(s => s.id === svcId);
+  if (!svc || !svc.stages) return;
+  const stage = svc.stages.find(st => st.id === stageId);
+  if (!stage) return;
+  const num = parseFloat(value);
+  stage[field] = isNaN(num) ? value : num;
+  saveCatalogToStorage();
+  renderServices();
+  updateTotals();
+}
+
+// === Generation sessions helpers ===
+function toggleGenerationInGroup(svcId, genId, checked) {
+  const sel = state.selected[svcId];
+  if (!sel) return;
+  if (!sel.generations) sel.generations = {};
+  if (!sel.generations[genId]) sel.generations[genId] = { enabled: false, personas: 30 };
+  sel.generations[genId].enabled = checked;
+  renderServices();
+  updateTotals();
+}
+
+function updateGenerationField(svcId, genId, field, value) {
+  const sel = state.selected[svcId];
+  if (!sel || !sel.generations || !sel.generations[genId]) return;
+  const num = parseFloat(value);
+  sel.generations[genId][field] = isNaN(num) ? value : num;
+  renderServices();
+  updateTotals();
+}
+
+function updateGenerationCatalogField(svcId, genId, field, value) {
+  const svc = state.catalog.find(s => s.id === svcId);
+  if (!svc || !svc.generations) return;
+  const gen = svc.generations.find(g => g.id === genId);
+  if (!gen) return;
+  const num = parseFloat(value);
+  gen[field] = isNaN(num) ? value : num;
+  saveCatalogToStorage();
+  renderServices();
+  updateTotals();
+}
+
+// ==================== EVENT MANAGEMENT ====================
+function renderEventMgmt() {
+  const container = document.getElementById("event-mgmt-container");
+  const showSection = state.filterCat === "Todos" || state.filterCat === "Empresas";
+  if (!showSection) { container.innerHTML = ""; return; }
+
+  const em = state.eventMgmt;
+  const fee = em.venueCost * (em.feePct / 100);
+  const totalEm = em.venueCost + fee;
+
+  if (!em.enabled) {
+    container.innerHTML = `
+      <div class="event-mgmt-section">
+        <div style="font-size: 11px; color: var(--cyan); font-weight: bold; letter-spacing: 2px; margin-bottom: 8px;">SERVICIO ADICIONAL · EMPRESAS</div>
+        <button class="event-mgmt-add-btn" onclick="toggleEventMgmt(true)">🏨 Agregar HOUP Event Management</button>
+        <div style="font-size: 11px; color: var(--grey); font-style: italic; margin-top: 6px; text-align: center;">
+          Para cuando HOUP gestiona el lugar del evento (hoteles, salones) — fee del ${em.feePct}% sobre el costo del lugar.
+        </div>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="event-mgmt-section">
+      <div style="font-size: 11px; color: var(--cyan); font-weight: bold; letter-spacing: 2px; margin-bottom: 8px;">SERVICIO ADICIONAL · EMPRESAS</div>
+      <div class="event-mgmt-card">
+        <div class="event-head">
+          <div>
+            <div class="event-tag">HOUP EVENT MANAGEMENT</div>
+            <div class="event-title">Gestión de lugar para evento</div>
+            <div class="event-subtitle">HOUP cobra ${em.feePct}% sobre el costo del lugar.</div>
+          </div>
+          <button class="btn btn-danger" onclick="toggleEventMgmt(false)">Quitar</button>
+        </div>
+        <div class="admin-only admin-config-box" style="background: #2a2a1a; border-color: #f0c000;">
+          <div class="admin-config-label" style="color: #f0c000;">CONFIG BASE (ADMIN)</div>
+          <div class="field"><label style="color: #aaa;">Fee HOUP (%)</label><input type="number" min="0" max="100" value="${em.feePct}" onchange="updateEventMgmt('feePct', this.value)" style="background: #1f1f1f; color: white; border: 1px solid #444;"></div>
+        </div>
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px;">
+          <div class="field"><label>Nombre del lugar</label><input type="text" value="${em.venueName.replace(/"/g, '&quot;')}" oninput="updateEventMgmt('venueName', this.value)" placeholder="Ej. Hotel Camino Real Saltillo"></div>
+          <div class="field"><label>Costo total del lugar (MXN)</label><input type="number" min="0" value="${em.venueCost}" oninput="updateEventMgmt('venueCost', this.value)" placeholder="0"></div>
+        </div>
+        <div class="event-totals">
+          <div><span class="lbl">Costo del lugar</span><span class="val">${formatMoney(em.venueCost)}</span></div>
+          <div><span class="lbl">Fee HOUP (${em.feePct}%)</span><span class="val cyan">${formatMoney(fee)}</span></div>
+          <div><span class="lbl">Total Event Mgmt</span><span class="val cyan">${formatMoney(totalEm)}</span></div>
+        </div>
+        <div class="event-iva-note">
+          ⚠ Los impuestos del lugar (IVA, ISR, etc.) ya vienen incluidos en el costo cotizado por el hotel.
+          Este monto se suma directamente al total — no se le aplica el IVA general del cotizador.
+          La cotización extendida del hotel se anexa por separado a la propuesta.
+        </div>
+      </div>
+    </div>`;
+}
+
+function toggleEventMgmt(enabled) {
+  state.eventMgmt.enabled = enabled;
+  if (!enabled) { state.eventMgmt.venueName = ""; state.eventMgmt.venueCost = 0; }
+  renderEventMgmt();
+  updateTotals();
+}
+
+function updateEventMgmt(field, value) {
+  if (field === "venueName") {
+    state.eventMgmt[field] = value;
+  } else {
+    state.eventMgmt[field] = parseFloat(value) || 0;
+    renderEventMgmt();
+  }
+  updateTotals();
+}
+
+// ==================== CALC ====================
+function calcDocenteCost(svc, cfg) {
+  const meses = cfg.meses || svc.mesesPorDefecto || 10;
+  const turnos = cfg.turnos || "matutino";
+  const compartido = cfg.docenteCompartido !== false;
+  if (turnos === "matutino" || turnos === "vespertino") return svc.docenteUnTurnoMensual * meses;
+  if (compartido) return svc.docenteDosTurnosMensual * meses;
+  return svc.docenteUnTurnoMensual * meses * 2;
+}
+function calcServiceTotal(svc, cfg) {
+  if (svc.type === "fundacion-programa") {
+    const docenteCost = calcDocenteCost(svc, cfg);
+    const ayudanteCost = cfg.incluirAyudante ? svc.ayudanteMensual * (cfg.meses || svc.mesesPorDefecto || 10) : 0;
+    const manualesCost = cfg.incluirManuales !== false ? svc.manualPorAlumno * (cfg.alumnos || 30) : 0;
+    return docenteCost + ayudanteCost + manualesCost;
+  }
+  if (svc.type === "flat") {
+    return (svc.flatPrice || 0) * (cfg.eventos || 1);
+  }
+  if (svc.type === "mailing") {
+    return (svc.pricePerEmail || 0) * (cfg.emailsPerMonth || 1) * (cfg.months || 10);
+  }
+  if (svc.type === "session-package") {
+    const numSelected = (cfg.selectedSessions || []).length;
+    const subtotal = (svc.pricePerSession || 0) * numSelected;
+    // Descuento si todas las sesiones están seleccionadas
+    if (numSelected === svc.sessions.length && svc.bundleDiscountPct > 0) {
+      return subtotal * (1 - svc.bundleDiscountPct / 100);
+    }
+    return subtotal;
+  }
+  if (svc.type === "standard-sessions") {
+    const num = cfg.numSessions || 1;
+    const subtotal = (svc.pricePerSession || 0) * num;
+    // Descuento al alcanzar bundleSize
+    if (svc.bundleSize && num >= svc.bundleSize && svc.bundleDiscountPct > 0) {
+      return subtotal * (1 - svc.bundleDiscountPct / 100);
+    }
+    return subtotal;
+  }
+  if (svc.type === "multi-stage") {
+    let total = 0;
+    svc.stages.forEach(st => {
+      const stageCfg = cfg.stages && cfg.stages[st.id];
+      if (!stageCfg || !stageCfg.enabled) return;
+      if (stageCfg.mode === "sessions") {
+        total += (st.pricePerSession || 0) * (stageCfg.sessions || 1);
+      } else {
+        total += (st.flatPrice || 0);
+      }
+    });
+    return total;
+  }
+  if (svc.type === "generation-sessions") {
+    let total = 0;
+    svc.generations.forEach(g => {
+      const gCfg = cfg.generations && cfg.generations[g.id];
+      if (!gCfg || !gCfg.enabled) return;
+      total += (g.pricePerPerson || 0) * (gCfg.personas || 0);
+    });
+    return total;
+  }
+  // standard (precio por persona)
+  return svc.pricePerPerson * (cfg.personas || 0);
+}
+
+// ==================== TOGGLE / UPDATE ====================
+function toggleService(id, checked) {
+  const svc = state.catalog.find(s => s.id === id);
+  if (!svc) return;
+  if (checked) {
+    state.selected[id] = defaultCfgFor(svc);
+  } else {
+    delete state.selected[id];
+  }
+  renderServices();
+  updateTotals();
+}
+
+function defaultCfgFor(svc) {
+  switch (svc.type) {
+    case "fundacion-programa":
+      return { alumnos: 30, meses: svc.mesesPorDefecto || 10, turnos: "matutino", docenteCompartido: true, incluirAyudante: false, incluirManuales: true };
+    case "flat":
+      return { eventos: 1 };
+    case "mailing":
+      return { emailsPerMonth: svc.defaultEmailsPerMonth || 1, months: svc.defaultMonths || 10 };
+    case "session-package":
+      // operador puede des-seleccionar sesiones individualmente — default todas activas
+      return { selectedSessions: svc.sessions.map(s => s.id) };
+    case "standard-sessions":
+      return { numSessions: 1 };
+    case "multi-stage":
+      // cada etapa: { enabled: false, mode: "flat"|"sessions", sessions: 1 }
+      const stages = {};
+      svc.stages.forEach(st => {
+        stages[st.id] = { enabled: false, mode: "flat", sessions: 1 };
+      });
+      return { stages };
+    case "generation-sessions":
+      // cada generación: { enabled: false, personas: 30 }
+      const gens = {};
+      svc.generations.forEach(g => {
+        gens[g.id] = { enabled: false, personas: 30 };
+      });
+      return { generations: gens };
+    case "standard":
+    default:
+      return { personas: 30 };
+  }
+}
+function updateSelectedField(id, field, value) {
+  if (!state.selected[id]) return;
+  if (typeof value === "boolean") {
+    state.selected[id][field] = value;
+  } else if (field === "turnos" || field === "mode") {
+    state.selected[id][field] = value;
+  } else {
+    const num = parseFloat(value);
+    state.selected[id][field] = isNaN(num) ? value : num;
+  }
+  renderServices();
+  updateTotals();
+}
+
+// Toggle individual sesión dentro de un session-package
+function toggleSessionInPackage(svcId, sessionId, checked) {
+  const sel = state.selected[svcId];
+  if (!sel) return;
+  if (!sel.selectedSessions) sel.selectedSessions = [];
+  if (checked && !sel.selectedSessions.includes(sessionId)) {
+    sel.selectedSessions.push(sessionId);
+  } else if (!checked) {
+    sel.selectedSessions = sel.selectedSessions.filter(x => x !== sessionId);
+  }
+  renderServices();
+  updateTotals();
+}
+
+// Toggle etapa dentro de multi-stage
+function toggleStageInMultiStage(svcId, stageId, checked) {
+  const sel = state.selected[svcId];
+  if (!sel) return;
+  if (!sel.stages[stageId]) sel.stages[stageId] = { enabled: false, mode: "flat", sessions: 1 };
+  sel.stages[stageId].enabled = checked;
+  renderServices();
+  updateTotals();
+}
+
+function updateStageField(svcId, stageId, field, value) {
+  const sel = state.selected[svcId];
+  if (!sel || !sel.stages[stageId]) return;
+  if (field === "mode") {
+    sel.stages[stageId][field] = value;
+  } else {
+    const num = parseFloat(value);
+    sel.stages[stageId][field] = isNaN(num) ? value : num;
+  }
+  renderServices();
+  updateTotals();
+}
+function updateCatalogField(id, field, value) {
+  const svc = state.catalog.find(s => s.id === id);
+  if (!svc) return;
+  const num = parseFloat(value);
+  svc[field] = isNaN(num) ? value : num;
+  saveCatalogToStorage();
+  renderServices();
+  updateTotals();
+}
+function deleteServiceFromCatalog(id) {
+  if (!confirm("¿Eliminar este servicio del catálogo?")) return;
+  state.catalog = state.catalog.filter(s => s.id !== id);
+  delete state.selected[id];
+  saveCatalogToStorage();
+  renderTabs();
+  renderServices();
+  updateTotals();
+}
+function addCustomServiceToCatalog() {
+  const name = document.getElementById("custom-name").value.trim();
+  const cat = document.getElementById("custom-cat").value;
+  const pricePerPerson = parseFloat(document.getElementById("custom-price").value) || 0;
+  const detail = document.getElementById("custom-detail").value.trim();
+  if (!name) { alert("Por favor escribe un nombre."); return; }
+  const id = "custom-" + Date.now();
+  state.catalog.push({ id, cat, name, detail, type: "standard", pricePerPerson });
+  document.getElementById("custom-name").value = "";
+  document.getElementById("custom-price").value = "";
+  document.getElementById("custom-detail").value = "";
+  saveCatalogToStorage();
+  renderTabs();
+  renderServices();
+}
+
+// ==================== STORAGE ====================
+async function saveCatalogToStorage() {
+  try {
+    const payload = JSON.stringify({ version: CATALOG_VERSION, catalog: state.catalog });
+    if (window.storage) await window.storage.set("catalog", payload);
+    else localStorage.setItem("houp-catalog", payload);
+  } catch (e) { console.error(e); }
+}
+async function loadCatalogFromStorage() {
+  try {
+    let raw = null;
+    if (window.storage) {
+      try { const r = await window.storage.get("catalog"); raw = r ? r.value : null; } catch (e) {}
+    } else {
+      raw = localStorage.getItem("houp-catalog");
+    }
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      // Solo carga si la versión coincide con la actual del archivo
+      if (parsed && parsed.version === CATALOG_VERSION && Array.isArray(parsed.catalog) && parsed.catalog.length > 0) {
+        state.catalog = parsed.catalog;
+      } else {
+        // Versión desactualizada — ignora el cache, usa catálogo del archivo y guarda con la nueva versión
+        console.log("Catálogo versionado desactualizado — recargando desde archivo");
+        await saveCatalogToStorage();
+      }
+    }
+  } catch (e) { console.error(e); }
+  renderTabs();
+  renderServices();
+  updateTotals();
+}
+
+// Restaurar catálogo desde el código del archivo (descarta ediciones del admin)
+async function restoreCatalogFromFile() {
+  if (!confirm("¿Restaurar el catálogo de fábrica? Se perderán todos los cambios de precios que el equipo haya hecho en modo admin.")) return;
+  state.catalog = JSON.parse(JSON.stringify(SERVICES_CATALOG));
+  state.selected = {};
+  state.presetApplied = null;
+  await saveCatalogToStorage();
+  renderTabs();
+  renderServices();
+  renderPresets();
+  updateTotals();
+  alert("Catálogo restaurado al estado de fábrica.");
+}
+
+// ==================== PRESETS ====================
+function renderPresets() {
+  document.getElementById("presets").innerHTML = PRESETS.map(p => `
+    <div class="preset ${state.presetApplied === p.id ? 'selected' : ''}" onclick="applyPreset('${p.id}')">
+      <div class="preset-tag">${p.tag}</div>
+      <div class="preset-name">${p.name}</div>
+      <div class="preset-desc">${p.desc}</div>
+      <div class="preset-disc">${p.discountPct > 0 ? 'Descuento ' + p.discountPct + '%' : 'Tarifa base'}</div>
+    </div>`).join("");
+}
+function applyPreset(presetId) {
+  const preset = PRESETS.find(p => p.id === presetId);
+  if (!preset) return;
+  if (state.presetApplied === presetId) {
+    state.presetApplied = null;
+    document.getElementById("manual-discount").value = 0;
+    renderPresets();
+    updateTotals();
+    return;
+  }
+  state.selected = {};
+  preset.services.forEach(svcId => {
+    const svc = state.catalog.find(s => s.id === svcId);
+    if (svc) {
+      const cfg = defaultCfgFor(svc);
+      // Override mailing emailsPerMonth from preset if defined
+      if (svc.type === "mailing" && preset.mailingEmailsPerMonth) {
+        cfg.emailsPerMonth = preset.mailingEmailsPerMonth;
+      }
+      // Para generation-sessions: activar todas las generaciones cuando viene de preset
+      if (svc.type === "generation-sessions" && cfg.generations) {
+        Object.keys(cfg.generations).forEach(gid => {
+          cfg.generations[gid].enabled = true;
+        });
+      }
+      state.selected[svcId] = cfg;
+    }
+  });
+  state.presetApplied = presetId;
+  document.getElementById("manual-discount").value = preset.discountPct;
+  renderPresets();
+  renderServices();
+  updateTotals();
+}
+
+// ==================== VOLUME INFO ====================
+function renderVolumeInfo() {
+  document.getElementById("volume-info-live").innerHTML = `
+    <div style="font-size: 11px; color: #888; margin-bottom: 12px; padding: 10px; background: #1A1A1A; border-radius: 4px;">
+      <strong style="color: var(--cyan);">DESCUENTOS POR VOLUMEN</strong><br>
+      ${VOLUME_DISCOUNTS.slice().reverse().map(v => `• ${v.minServices}+ servicios → ${v.pct}%`).join("<br>")}
+    </div>`;
+}
+
+// ==================== TOTALS ====================
+function updateTotals() {
+  const services = Object.entries(state.selected).map(([id, cfg]) => {
+    const svc = state.catalog.find(s => s.id === id);
+    if (!svc) return null;
+    return { svc, cfg, total: calcServiceTotal(svc, cfg) };
+  }).filter(Boolean);
+
+  const numServices = services.length;
+  let subtotal = services.reduce((acc, s) => acc + s.total, 0);
+
+  let volDisc = 0, volDiscPct = 0, volDiscLabel = "";
+  for (const tier of VOLUME_DISCOUNTS) {
+    if (numServices >= tier.minServices) {
+      volDiscPct = tier.pct;
+      volDiscLabel = tier.label;
+      volDisc = subtotal * (tier.pct / 100);
+      break;
+    }
+  }
+
+  const manualDiscPct = parseFloat(document.getElementById("manual-discount").value) || 0;
+  if (state.presetApplied) { volDisc = 0; volDiscPct = 0; volDiscLabel = ""; }
+  const manualDisc = (subtotal - volDisc) * (manualDiscPct / 100);
+
+  const trips = parseInt(document.getElementById("travel-trips").value) || 0;
+  const travelCost = parseFloat(document.getElementById("travel-cost").value) || 0;
+  const travelTotal = trips * travelCost;
+
+  const houpSubAfterDisc = subtotal - volDisc - manualDisc + travelTotal;
+  const applyIva = document.getElementById("apply-iva").value === "yes";
+  const iva = applyIva ? houpSubAfterDisc * 0.16 : 0;
+
+  const em = state.eventMgmt;
+  const eventMgmtTotal = em.enabled ? em.venueCost + (em.venueCost * em.feePct / 100) : 0;
+
+  const grandTotal = houpSubAfterDisc + iva + eventMgmtTotal;
+
+  // Render selected list
+  const listEl = document.getElementById("selected-list");
+  let listHtml = "";
+  if (services.length === 0 && !em.enabled) {
+    listHtml = `<div class="empty-msg">Aún no has seleccionado servicios.</div>`;
+  } else {
+    services.forEach(s => {
+      let qtyText = "";
+      if (s.svc.type === "fundacion-programa") {
+        const turnoLabel = s.cfg.turnos === "ambos" ? (s.cfg.docenteCompartido ? "Ambos turnos · 1 docente" : "Ambos turnos · 2 docentes") : (s.cfg.turnos === "matutino" ? "Solo matutino" : "Solo vespertino");
+        qtyText = `${turnoLabel} · ${s.cfg.alumnos} alumnos · ${s.cfg.meses} meses`;
+      } else if (s.svc.type === "flat") {
+        const ev = s.cfg.eventos || 1;
+        qtyText = `${ev} ${s.svc.unitLabel || "evento"}${ev > 1 ? 's' : ''}`;
+      } else if (s.svc.type === "mailing") {
+        const total = (s.cfg.emailsPerMonth || 1) * (s.cfg.months || 10);
+        qtyText = `${total} correos · ${s.cfg.emailsPerMonth}/mes × ${s.cfg.months} meses`;
+      } else if (s.svc.type === "session-package") {
+        const num = (s.cfg.selectedSessions || []).length;
+        const isFull = num === s.svc.sessions.length;
+        qtyText = `${num} sesión${num !== 1 ? 'es' : ''}${isFull && s.svc.bundleDiscountPct > 0 ? ' (paquete -' + s.svc.bundleDiscountPct + '%)' : ''}`;
+      } else if (s.svc.type === "standard-sessions") {
+        const num = s.cfg.numSessions || 1;
+        const isFull = s.svc.bundleSize && num >= s.svc.bundleSize;
+        qtyText = `${num} sesión${num !== 1 ? 'es' : ''}${isFull && s.svc.bundleDiscountPct > 0 ? ' (paquete -' + s.svc.bundleDiscountPct + '%)' : ''}`;
+      } else if (s.svc.type === "multi-stage") {
+        const enabledStages = (s.cfg.stages ? Object.entries(s.cfg.stages).filter(([k, v]) => v.enabled) : []);
+        qtyText = `${enabledStages.length} de ${s.svc.stages.length} etapas activas`;
+      } else if (s.svc.type === "generation-sessions") {
+        const enabledGens = s.svc.generations.filter(g => s.cfg.generations && s.cfg.generations[g.id] && s.cfg.generations[g.id].enabled);
+        const totalPersonas = enabledGens.reduce((acc, g) => acc + (s.cfg.generations[g.id].personas || 0), 0);
+        qtyText = `${enabledGens.length} de ${s.svc.generations.length} generaciones · ${totalPersonas} personas en total`;
+      } else {
+        qtyText = `${s.cfg.personas} personas × ${formatMoney(s.svc.pricePerPerson)}`;
+      }
+      listHtml += `<div class="selected-row"><div class="selected-info"><div class="selected-name">${s.svc.name}</div><div class="selected-qty">${qtyText}</div></div><div class="selected-amount">${formatMoney(s.total)}</div></div>`;
+    });
+    if (em.enabled && eventMgmtTotal > 0) {
+      const venue = em.venueName || 'Lugar pendiente';
+      listHtml += `<div class="selected-row event-mgmt"><div class="selected-info"><div class="selected-name">🏨 HOUP Event Management</div><div class="selected-qty">${venue} · costo $${em.venueCost.toLocaleString('es-MX')} + ${em.feePct}% fee</div></div><div class="selected-amount">${formatMoney(eventMgmtTotal)}</div></div>`;
+    }
+  }
+  listEl.innerHTML = listHtml;
+
+  document.getElementById("subtotal").textContent = formatMoney(subtotal);
+
+  const rowVol = document.getElementById("row-vol-disc");
+  if (volDisc > 0) {
+    rowVol.style.display = "flex";
+    document.getElementById("vol-disc-label").textContent = `Desc. volumen (${volDiscLabel} · ${volDiscPct}%)`;
+    document.getElementById("vol-disc-amount").textContent = `−${formatMoney(volDisc)}`;
+  } else { rowVol.style.display = "none"; }
+
+  const rowMan = document.getElementById("row-manual-disc");
+  if (manualDisc > 0) {
+    rowMan.style.display = "flex";
+    document.getElementById("manual-disc-label").textContent = state.presetApplied ? `Desc. paquete (${manualDiscPct}%)` : `Desc. manual (${manualDiscPct}%)`;
+    document.getElementById("manual-disc-amount").textContent = `−${formatMoney(manualDisc)}`;
+  } else { rowMan.style.display = "none"; }
+
+  const rowTrav = document.getElementById("row-travel");
+  if (travelTotal > 0) {
+    rowTrav.style.display = "flex";
+    document.getElementById("travel-amount").textContent = formatMoney(travelTotal);
+  } else { rowTrav.style.display = "none"; }
+
+  const rowIva = document.getElementById("row-iva");
+  if (iva > 0) {
+    rowIva.style.display = "flex";
+    document.getElementById("iva-amount").textContent = formatMoney(iva);
+  } else { rowIva.style.display = "none"; }
+
+  const rowEm = document.getElementById("row-event-mgmt");
+  if (eventMgmtTotal > 0) {
+    rowEm.style.display = "flex";
+    document.getElementById("event-mgmt-amount").textContent = formatMoney(eventMgmtTotal);
+  } else { rowEm.style.display = "none"; }
+
+  document.getElementById("grand-total").textContent = formatMoney(grandTotal);
+
+  updatePrintSummary({ services, subtotal, volDisc, volDiscPct, volDiscLabel, manualDisc, manualDiscPct, travelTotal, iva, eventMgmtTotal, grandTotal, applyIva, em });
+  updatePrint();
+}
+
+function updatePrint() {
+  const name = document.getElementById("client-name").value || "—";
+  const contact = document.getElementById("client-contact").value;
+  const email = document.getElementById("client-email").value;
+  const phone = document.getElementById("client-phone").value;
+  const date = document.getElementById("quote-date").value;
+  document.getElementById("print-client-name").textContent = name;
+  const meta = [contact, email, phone].filter(Boolean).join(" · ");
+  document.getElementById("print-meta").textContent = meta || "—";
+  document.getElementById("print-date").textContent = date ? formatDate(date) : "—";
+}
+
+function updatePrintSummary(data) {
+  const el = document.getElementById("print-summary");
+  if (data.services.length === 0 && !data.em.enabled) {
+    el.innerHTML = '<p style="color:#888;font-style:italic;">Sin servicios contratados.</p>';
+    return;
+  }
+
+  const byCat = {};
+  data.services.forEach(s => { if (!byCat[s.svc.cat]) byCat[s.svc.cat] = []; byCat[s.svc.cat].push(s); });
+
+  let html = '';
+  Object.keys(byCat).forEach(cat => {
+    html += `<div style="margin-bottom: 18px;"><div style="color: var(--cyan); font-size: 10px; font-weight: bold; letter-spacing: 2px; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid #ddd;">${cat.toUpperCase()}</div>`;
+    byCat[cat].forEach(s => {
+      let qtyText = "";
+      if (s.svc.type === "fundacion-programa") {
+        const turnoLabel = s.cfg.turnos === "ambos" ? (s.cfg.docenteCompartido ? "Ambos turnos (docente compartido)" : "Ambos turnos (2 docentes)") : (s.cfg.turnos === "matutino" ? "Solo turno matutino" : "Solo turno vespertino");
+        qtyText = `${turnoLabel} · ${s.cfg.alumnos} alumnos · ${s.cfg.meses} meses${s.cfg.incluirAyudante ? ' · incluye ayudante' : ''}`;
+      } else if (s.svc.type === "flat") {
+        const ev = s.cfg.eventos || 1;
+        qtyText = `${ev} ${s.svc.unitLabel || 'evento'}${ev > 1 ? 's' : ''} × ${formatMoney(s.svc.flatPrice)}`;
+      } else if (s.svc.type === "mailing") {
+        const total = (s.cfg.emailsPerMonth || 1) * (s.cfg.months || 10);
+        qtyText = `${total} correos en total · ${s.cfg.emailsPerMonth} al mes × ${s.cfg.months} meses · ${formatMoney(s.svc.pricePerEmail)} por correo`;
+      } else if (s.svc.type === "session-package") {
+        const sel = s.cfg.selectedSessions || [];
+        const sessionLabels = s.svc.sessions.filter(ss => sel.includes(ss.id)).map(ss => ss.label).join(' · ');
+        const isFull = sel.length === s.svc.sessions.length;
+        qtyText = `${sessionLabels}${isFull && s.svc.bundleDiscountPct > 0 ? ' · paquete completo con descuento ' + s.svc.bundleDiscountPct + '%' : ''}`;
+      } else if (s.svc.type === "standard-sessions") {
+        const num = s.cfg.numSessions || 1;
+        const isFull = s.svc.bundleSize && num >= s.svc.bundleSize;
+        qtyText = `${num} sesión${num !== 1 ? 'es' : ''} × ${formatMoney(s.svc.pricePerSession)}${isFull && s.svc.bundleDiscountPct > 0 ? ' · paquete con descuento ' + s.svc.bundleDiscountPct + '%' : ''}`;
+      } else if (s.svc.type === "multi-stage") {
+        const enabled = s.svc.stages.filter(st => s.cfg.stages && s.cfg.stages[st.id] && s.cfg.stages[st.id].enabled);
+        qtyText = `${enabled.length} de ${s.svc.stages.length} etapas: ${enabled.map(st => st.label.split('·')[0].trim()).join(' · ')}`;
+      } else if (s.svc.type === "generation-sessions") {
+        const enabled = s.svc.generations.filter(g => s.cfg.generations && s.cfg.generations[g.id] && s.cfg.generations[g.id].enabled);
+        const desglose = enabled.map(g => `${g.label.split('·')[0].trim()}: ${s.cfg.generations[g.id].personas} pers.`).join(' · ');
+        qtyText = `${enabled.length} generaci${enabled.length === 1 ? 'ón' : 'ones'} — ${desglose}`;
+      } else {
+        qtyText = `${s.cfg.personas} personas × ${formatMoney(s.svc.pricePerPerson)} por persona`;
+      }
+      html += `<div style="display: flex; justify-content: space-between; padding: 6px 0; font-size: 12px; border-bottom: 1px dotted #eee;"><div style="flex: 1;"><div style="font-weight: 600;">${s.svc.name}</div><div style="color: var(--grey); font-size: 11px;">${qtyText}${s.svc.detail ? ' · ' + s.svc.detail : ''}</div></div><div style="font-weight: bold; min-width: 110px; text-align: right;">${formatMoney(s.total)}</div></div>`;
+    });
+    html += `</div>`;
+  });
+
+  if (data.em.enabled) {
+    const fee = data.em.venueCost * (data.em.feePct / 100);
+    html += `<div style="margin-bottom: 18px;"><div style="color: var(--cyan); font-size: 10px; font-weight: bold; letter-spacing: 2px; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid #ddd;">HOUP EVENT MANAGEMENT</div><div style="display: flex; justify-content: space-between; padding: 6px 0; font-size: 12px; border-bottom: 1px dotted #eee;"><div style="flex: 1;"><div style="font-weight: 600;">Gestión del lugar — ${data.em.venueName || 'Por definir'}</div><div style="color: var(--grey); font-size: 11px;">Costo del lugar ${formatMoney(data.em.venueCost)} + fee HOUP ${data.em.feePct}% (${formatMoney(fee)})</div></div><div style="font-weight: bold; min-width: 110px; text-align: right;">${formatMoney(data.eventMgmtTotal)}</div></div><div style="font-size: 10.5px; color: var(--orange); font-style: italic; padding: 8px 10px; background: rgba(245,158,11,0.08); border-radius: 4px; margin-top: 6px;">⚠ La cotización extendida del lugar se anexa por separado. Los impuestos del establecimiento (IVA, ISR, otros) ya están incluidos en el costo cotizado.</div></div>`;
+  }
+
+  html += `<div style="margin-top: 24px; padding-top: 14px; border-top: 2px solid var(--black);">`;
+  if (data.services.length > 0) {
+    html += `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;"><span>Subtotal servicios HOUP</span><span>${formatMoney(data.subtotal)}</span></div>`;
+    if (data.volDisc > 0) html += `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;color:var(--cyan);"><span>Desc. volumen (${data.volDiscLabel} · ${data.volDiscPct}%)</span><span>−${formatMoney(data.volDisc)}</span></div>`;
+    if (data.manualDisc > 0) html += `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;color:var(--cyan);"><span>Descuento aplicado (${data.manualDiscPct}%)</span><span>−${formatMoney(data.manualDisc)}</span></div>`;
+    if (data.travelTotal > 0) html += `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;"><span>Viáticos</span><span>${formatMoney(data.travelTotal)}</span></div>`;
+    if (data.iva > 0) html += `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;"><span>IVA 16% (sobre servicios HOUP)</span><span>${formatMoney(data.iva)}</span></div>`;
+  }
+  if (data.eventMgmtTotal > 0) {
+    html += `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;color:#9a6500;"><span>HOUP Event Management <small>(impuestos del lugar incluidos)</small></span><span>${formatMoney(data.eventMgmtTotal)}</span></div>`;
+  }
+  html += `<div style="display:flex;justify-content:space-between;padding:10px 0 4px;font-size:18px;font-weight:bold;border-top:1px solid #ddd;margin-top:8px;"><span>TOTAL</span><span style="color:var(--cyan);">${formatMoney(data.grandTotal)}</span></div>`;
+  html += `<div style="font-size:10px;color:var(--grey);margin-top:4px;">Servicios HOUP en MXN${data.applyIva ? ' (con IVA)' : ' netos'}.${data.eventMgmtTotal > 0 ? ' Event Management con impuestos del lugar incluidos.' : ''}</div>`;
+  html += `</div>`;
+
+  const payment = document.getElementById("payment-terms").value;
+  const notes = document.getElementById("client-notes").value;
+  html += `<div style="margin-top: 24px; padding: 14px; background: #f4f4f4; border-radius: 4px; font-size: 12px;"><div style="font-weight: bold; color: var(--cyan); font-size: 10px; letter-spacing: 2px; margin-bottom: 6px;">FORMA DE PAGO</div><div>${payment || '—'}</div></div>`;
+  if (notes) html += `<div style="margin-top: 12px; padding: 14px; background: #f4f4f4; border-radius: 4px; font-size: 12px;"><div style="font-weight: bold; color: var(--cyan); font-size: 10px; letter-spacing: 2px; margin-bottom: 6px;">NOTAS</div><div>${notes}</div></div>`;
+  el.innerHTML = html;
+}
+
+function formatMoney(n) {
+  if (n === null || n === undefined || isNaN(n)) return "$0";
+  return "$" + (Math.round(n)).toLocaleString("es-MX");
+}
+function formatDate(s) {
+  const d = new Date(s + 'T00:00:00');
+  const months = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+  return `${d.getDate()} de ${months[d.getMonth()]} de ${d.getFullYear()}`;
+}
+
+// ==================== STORAGE: cotizaciones ====================
+async function saveCotizacion() {
+  const name = document.getElementById("client-name").value || "Sin nombre";
+  if (Object.keys(state.selected).length === 0 && !state.eventMgmt.enabled) {
+    alert("Agrega al menos un servicio antes de guardar.");
+    return;
+  }
+  const id = "quote-" + Date.now();
+  const data = {
+    id, name,
+    contact: document.getElementById("client-contact").value,
+    email: document.getElementById("client-email").value,
+    phone: document.getElementById("client-phone").value,
+    date: document.getElementById("quote-date").value,
+    notes: document.getElementById("client-notes").value,
+    selected: state.selected,
+    eventMgmt: state.eventMgmt,
+    presetApplied: state.presetApplied,
+    manualDiscount: document.getElementById("manual-discount").value,
+    travelZone: document.getElementById("travel-zone").value,
+    travelTrips: document.getElementById("travel-trips").value,
+    travelCost: document.getElementById("travel-cost").value,
+    applyIva: document.getElementById("apply-iva").value,
+    paymentTerms: document.getElementById("payment-terms").value,
+    savedAt: new Date().toISOString()
+  };
+  try {
+    if (window.storage) {
+      await window.storage.set(id, JSON.stringify(data));
+    } else {
+      const existing = JSON.parse(localStorage.getItem("houp-quotes") || "{}");
+      existing[id] = data;
+      localStorage.setItem("houp-quotes", JSON.stringify(existing));
+    }
+    alert("Cotización guardada: " + name);
+  } catch (err) { alert("Error al guardar: " + err.message); }
+}
+
+async function loadSavedQuotes() {
+  try {
+    if (window.storage) {
+      const result = await window.storage.list("quote-");
+      if (!result || !result.keys || result.keys.length === 0) return [];
+      const quotes = [];
+      for (const k of result.keys) {
+        try { const r = await window.storage.get(k); if (r) quotes.push(JSON.parse(r.value)); } catch (e) {}
+      }
+      return quotes.sort((a, b) => b.savedAt.localeCompare(a.savedAt));
+    } else {
+      const existing = JSON.parse(localStorage.getItem("houp-quotes") || "{}");
+      return Object.values(existing).sort((a, b) => b.savedAt.localeCompare(a.savedAt));
+    }
+  } catch (err) { return []; }
+}
+
+async function openSavedModal() {
+  const quotes = await loadSavedQuotes();
+  const list = document.getElementById("saved-list-modal");
+  if (quotes.length === 0) {
+    list.innerHTML = `<div class="empty-msg">No hay cotizaciones guardadas.</div>`;
+  } else {
+    list.innerHTML = quotes.map(q => `<div class="saved-row"><div class="saved-info"><div style="font-weight: 600;">${q.name}</div><div class="saved-meta">${q.date || '—'} · ${Object.keys(q.selected || {}).length} servicios${q.eventMgmt && q.eventMgmt.enabled ? ' · +Event Mgmt' : ''}</div></div><div class="saved-actions"><button class="btn btn-ghost" style="font-size: 11px; padding: 4px 8px;" onclick="loadQuote('${q.id}')">Cargar</button><button class="btn btn-danger" onclick="deleteQuote('${q.id}')">Eliminar</button></div></div>`).join("");
+  }
+  document.getElementById("saved-modal").classList.add("show");
+}
+function closeSavedModal() { document.getElementById("saved-modal").classList.remove("show"); }
+
+async function loadQuote(id) {
+  try {
+    let data;
+    if (window.storage) {
+      const r = await window.storage.get(id);
+      data = r ? JSON.parse(r.value) : null;
+    } else {
+      const existing = JSON.parse(localStorage.getItem("houp-quotes") || "{}");
+      data = existing[id];
+    }
+    if (!data) { alert("Cotización no encontrada."); return; }
+    document.getElementById("client-name").value = data.name || "";
+    document.getElementById("client-contact").value = data.contact || "";
+    document.getElementById("client-email").value = data.email || "";
+    document.getElementById("client-phone").value = data.phone || "";
+    document.getElementById("quote-date").value = data.date || "";
+    document.getElementById("client-notes").value = data.notes || "";
+    document.getElementById("manual-discount").value = data.manualDiscount || "0";
+    document.getElementById("travel-zone").value = data.travelZone || "local";
+    document.getElementById("travel-trips").value = data.travelTrips || "0";
+    document.getElementById("travel-cost").value = data.travelCost || "0";
+    document.getElementById("apply-iva").value = data.applyIva || "yes";
+    document.getElementById("payment-terms").value = data.paymentTerms || "";
+    state.selected = data.selected || {};
+    state.eventMgmt = data.eventMgmt || { enabled: false, venueName: "", venueCost: 0, feePct: EVENT_MGMT_FEE_DEFAULT };
+    state.presetApplied = data.presetApplied || null;
+    closeSavedModal();
+    renderPresets();
+    renderServices();
+    renderEventMgmt();
+    updateTotals();
+  } catch (err) { alert("Error al cargar: " + err.message); }
+}
+
+async function deleteQuote(id) {
+  if (!confirm("¿Eliminar esta cotización?")) return;
+  try {
+    if (window.storage) await window.storage.delete(id);
+    else {
+      const existing = JSON.parse(localStorage.getItem("houp-quotes") || "{}");
+      delete existing[id];
+      localStorage.setItem("houp-quotes", JSON.stringify(existing));
+    }
+    openSavedModal();
+  } catch (err) { alert("Error al eliminar: " + err.message); }
+}
+
+function resetAll() {
+  if (!confirm("¿Iniciar nueva cotización? Los datos actuales se perderán si no los has guardado.")) return;
+  document.getElementById("client-name").value = "";
+  document.getElementById("client-contact").value = "";
+  document.getElementById("client-email").value = "";
+  document.getElementById("client-phone").value = "";
+  document.getElementById("quote-date").valueAsDate = new Date();
+  document.getElementById("client-notes").value = "";
+  document.getElementById("manual-discount").value = "0";
+  document.getElementById("travel-zone").value = "local";
+  document.getElementById("travel-trips").value = "0";
+  document.getElementById("travel-cost").value = "0";
+  document.getElementById("apply-iva").value = "yes";
+  document.getElementById("payment-terms").value = "50% al confirmar · 50% contra entrega de cada componente";
+  state.selected = {};
+  state.eventMgmt = { enabled: false, venueName: "", venueCost: 0, feePct: EVENT_MGMT_FEE_DEFAULT };
+  state.presetApplied = null;
+  renderPresets();
+  renderServices();
+  renderEventMgmt();
+  updateTotals();
+}
+
+init();
+</script>
+</body>
+</html>
