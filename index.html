@@ -257,7 +257,6 @@
       <div class="selected-list" id="selected-list"><div class="empty-msg">Aún no has seleccionado servicios.</div></div>
       <div class="totals" id="totals">
         <div class="totals-row"><span>Subtotal servicios HOUP</span><span class="amount" id="subtotal">$0</span></div>
-        <div class="totals-row discount" id="row-vol-disc" style="display:none;"><span id="vol-disc-label">Descuento por volumen</span><span class="amount" id="vol-disc-amount">−$0</span></div>
         <div class="totals-row discount" id="row-manual-disc" style="display:none;"><span id="manual-disc-label">Descuento manual</span><span class="amount" id="manual-disc-amount">−$0</span></div>
         <div class="totals-row" id="row-travel" style="display:none;"><span>Viáticos</span><span class="amount" id="travel-amount">$0</span></div>
         <div class="totals-row" id="row-iva" style="display:none;"><span>IVA 16% (sobre servicios HOUP)</span><span class="amount" id="iva-amount">$0</span></div>
@@ -298,14 +297,19 @@ const ADMIN_PASSWORD = "houp2026";
 
 // Cuando se hagan cambios al SERVICES_CATALOG, incrementa este número.
 // Esto invalida el cache del navegador y carga el nuevo catálogo del archivo.
-const CATALOG_VERSION = 6;
+const CATALOG_VERSION = 7;
 
 // SERVICIOS — modelo flexible:
 // type "standard" = precio por persona
 // type "flat" = precio fijo (no escala con personas, ej. conferencia, mailing)
 // type "fundacion-programa" = estructura especial Fundación (turnos + ayudante + manuales)
-// type "session-package" = paquete de N sesiones nombradas, operador elige cuáles, descuento al tomar todas
 // type "multi-stage" = proceso de etapas (cultura organizacional)
+// type "generation-sessions" = grupo de sesiones por generación (Educación)
+// type "mailing" = correos × meses
+// type "integration-tiered" = sesiones integración con tarifa por escalones (50-60/61-70/etc) + horas
+// type "family-session" = cobro por familia (no por persona)
+// type "strategic-sessions" = sesiones de planeación estratégica con # sesiones × horas
+// type "consulting-event" = evento consultoría con planeación + facilitadores + materiales + utilidad
 
 const SERVICES_CATALOG = [
   // --- EDUCACIÓN ---
@@ -316,43 +320,49 @@ const SERVICES_CATALOG = [
     id: "edu-int-gen",
     cat: "Educación",
     name: "Sesiones de integración por generación",
-    detail: "Talleres vivenciales de 4h por generación · selecciona las que aplican y ajusta # de personas en cada una",
-    type: "generation-sessions",
+    detail: "Talleres vivenciales por generación · tarifa por escalones según # de personas · duración 2/4/6 horas",
+    type: "integration-tiered",
+    minPersonas: 50,
+    defaultHours: 4,
+    tiers: [
+      { min: 50, max: 60, pricePerPerson: 450 },
+      { min: 61, max: 70, pricePerPerson: 380 },
+      { min: 71, max: 100, pricePerPerson: 350 },
+      { min: 101, max: 99999, pricePerPerson: 280 }
+    ],
     generations: [
-      { id: "g5", label: "5° de primaria", pricePerPerson: 0 },
-      { id: "g6", label: "6° de primaria", pricePerPerson: 0 },
-      { id: "g7", label: "7° (1° de secundaria)", pricePerPerson: 0 },
-      { id: "g8", label: "8° (2° de secundaria)", pricePerPerson: 0 },
-      { id: "g9", label: "9° · cierre de generación · sello distintivo HOUP", pricePerPerson: 0 }
+      { id: "g5", label: "5° de primaria" },
+      { id: "g6", label: "6° de primaria" },
+      { id: "g7", label: "7° (1° de secundaria)" },
+      { id: "g8", label: "8° (2° de secundaria)" },
+      { id: "g9", label: "9° · cierre de generación · sello distintivo HOUP" }
     ]
   },
-  { id: "edu-fam-padre-hijo", cat: "Educación", name: "Retiro familiar — 5° primaria (padre · hijo)", detail: "Hito de integración familiar para 5° de primaria", type: "standard", pricePerPerson: 0 },
-  { id: "edu-fam-madre-hijo", cat: "Educación", name: "Retiro familiar — 6° primaria (madre · hijo)", detail: "Hito de integración familiar para cierre de primaria", type: "standard", pricePerPerson: 0 },
-  { id: "edu-fam-toda", cat: "Educación", name: "Retiro familiar — 7° secundaria (toda la familia)", detail: "Hito de integración familiar para entrada a secundaria", type: "standard", pricePerPerson: 0 },
+  { id: "edu-fam-padre-hijo", cat: "Educación", name: "Retiro familiar — 5° primaria (padre · hijo)", detail: "Hito de integración familiar para 5° de primaria · cobro por familia (padre + hijo)", type: "family-session", pricePerFamily: 0 },
+  { id: "edu-fam-madre-hijo", cat: "Educación", name: "Retiro familiar — 6° primaria (madre · hijo)", detail: "Hito de integración familiar para cierre de primaria · cobro por familia (madre + hijo)", type: "family-session", pricePerFamily: 0 },
+  { id: "edu-fam-toda", cat: "Educación", name: "Retiro familiar — 7° secundaria (toda la familia)", detail: "Hito de integración familiar para entrada a secundaria · cobro por familia completa", type: "family-session", pricePerFamily: 0 },
 
   // --- EMPRESAS ---
   {
     id: "emp-alto-rendimiento", cat: "Empresas",
     name: "Desarrollo de equipos de alto rendimiento",
-    detail: "Programa de 4 sesiones · 1 por quarter · Metodología 3C's · 10% de descuento al contratar las 4 sesiones",
-    type: "session-package",
-    pricePerSession: 0,
-    bundleDiscountPct: 10,
-    sessions: [
-      { id: "intro-3c", label: "Sesión 1 · Introducción a las 3C's" },
-      { id: "claridad", label: "Sesión 2 · Claridad" },
-      { id: "confianza", label: "Sesión 3 · Confianza" },
-      { id: "confrontacion", label: "Sesión 4 · Confrontación" }
-    ]
+    detail: "Consultoría facilitada por HOUP · cálculo automático según horas, # personas y materiales · margen de utilidad incluido",
+    type: "consulting-event",
+    facilitatorHourlyRate: 1200,    // costo por hora de un facilitador
+    materialsPerPerson: 300,         // materiales fijos por persona
+    planningHourlyRate: 1200,        // costo de hora de planeación (típicamente igual a facilitador)
+    planningHoursMultiplier: 2,      // planeación = horas evento × 2
+    utilityPct: 65,                  // % utilidad sobre costo
+    defaultPersonas: 8,
+    defaultHours: 4
   },
   {
-    id: "emp-desarrollo-org", cat: "Empresas",
-    name: "Sesiones de desarrollo organizacional",
-    detail: "Mediación con equipos directivos · planeación estratégica, cultura, alineación · HOUP funge como facilitador. Cotiza por # de sesiones.",
-    type: "standard-sessions",
-    pricePerSession: 0,
-    bundleSize: 4,
-    bundleDiscountPct: 10
+    id: "emp-planeacion-estrategica", cat: "Empresas",
+    name: "Sesiones de planeación estratégica",
+    detail: "Mediación con equipos directivos · planeación estratégica, cultura, alineación · HOUP funge como facilitador. Cotiza por # de sesiones × horas por sesión.",
+    type: "strategic-sessions",
+    pricePerHour: 0,
+    defaultHours: 4
   },
   {
     id: "emp-cultura", cat: "Empresas",
@@ -406,15 +416,9 @@ const SERVICES_CATALOG = [
 ];
 
 const PRESETS = [
-  { id: "esencial", tag: "ESENCIAL", name: "El arranque", desc: "Capacitación docente + conferencia a padres + mailing 1×/mes.", services: ["edu-cap-doc", "edu-conf-fam", "edu-mailing"], discountPct: 0, mailingEmailsPerMonth: 1 },
-  { id: "integral", tag: "INTEGRAL", name: "El más elegido", desc: "Esencial + sesiones de integración por generación.", services: ["edu-cap-doc", "edu-conf-fam", "edu-mailing", "edu-int-gen"], discountPct: 8, mailingEmailsPerMonth: 1 },
-  { id: "completo", tag: "COMPLETO", name: "Plan integrador", desc: "Todos los componentes: integración por generación + retiros familiares · mailing 2×/mes.", services: ["edu-cap-doc", "edu-conf-fam", "edu-mailing", "edu-int-gen", "edu-fam-padre-hijo", "edu-fam-madre-hijo", "edu-fam-toda"], discountPct: 16, mailingEmailsPerMonth: 2 }
-];
-
-const VOLUME_DISCOUNTS = [
-  { minServices: 10, pct: 18, label: "10+ servicios" },
-  { minServices: 8, pct: 15, label: "8+ servicios" },
-  { minServices: 5, pct: 10, label: "5+ servicios" }
+  { id: "esencial", tag: "ESENCIAL", name: "El arranque", desc: "Capacitación docente + conferencia a padres + mailing 1×/mes. (Solo Educación)", services: ["edu-cap-doc", "edu-conf-fam", "edu-mailing"], discountPct: 0, mailingEmailsPerMonth: 1 },
+  { id: "integral", tag: "INTEGRAL", name: "El más elegido", desc: "Esencial + sesiones de integración por generación. (Solo Educación)", services: ["edu-cap-doc", "edu-conf-fam", "edu-mailing", "edu-int-gen"], discountPct: 8, mailingEmailsPerMonth: 1 },
+  { id: "completo", tag: "COMPLETO", name: "Plan integrador", desc: "Todos los componentes de Educación + retiros familiares · mailing 2×/mes.", services: ["edu-cap-doc", "edu-conf-fam", "edu-mailing", "edu-int-gen", "edu-fam-padre-hijo", "edu-fam-madre-hijo", "edu-fam-toda"], discountPct: 16, mailingEmailsPerMonth: 2 }
 ];
 
 const EVENT_MGMT_FEE_DEFAULT = 15;
@@ -599,76 +603,167 @@ function renderServiceCard(svc) {
       </div>`;
   }
 
-  // ==== SESSION PACKAGE (paquete de sesiones nombradas, descuento al tomar todas) ====
-  if (svc.type === "session-package") {
-    const cfg = sel || { selectedSessions: svc.sessions.map(s => s.id) };
-    const numSelected = (cfg.selectedSessions || []).length;
-    const isFullBundle = numSelected === svc.sessions.length;
-    const subtotalSinDesc = (svc.pricePerSession || 0) * numSelected;
+  // ==== INTEGRATION TIERED (Sesiones de integración por generación con tarifa por escalones + horas) ====
+  if (svc.type === "integration-tiered") {
+    const cfg = sel || { generations: {} };
+    const baseHours = svc.defaultHours || 4;
+    return `
+      <div class="service-card ${isSelected ? 'selected' : ''}">
+        ${cardHead(svc, isSelected)}
+        <div class="admin-only admin-config-box">
+          <div class="admin-config-label">CONFIG BASE (ADMIN) · TARIFA POR ESCALONES SEGÚN # PERSONAS</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;">
+            <div class="field"><label>Mínimo de personas</label><input type="number" min="1" value="${svc.minPersonas}" onchange="updateCatalogField('${svc.id}', 'minPersonas', this.value)"></div>
+            <div class="field"><label>Horas base (referencia)</label><input type="number" min="1" value="${svc.defaultHours}" onchange="updateCatalogField('${svc.id}', 'defaultHours', this.value)"></div>
+          </div>
+          ${svc.tiers.map((tier, idx) => `
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 4px; align-items: end;">
+              <div class="field"><label>Mín personas</label><input type="number" min="1" value="${tier.min}" onchange="updateTierField('${svc.id}', ${idx}, 'min', this.value)"></div>
+              <div class="field"><label>Máx personas</label><input type="number" min="1" value="${tier.max === 99999 ? '' : tier.max}" placeholder="∞" onchange="updateTierField('${svc.id}', ${idx}, 'max', this.value || 99999)"></div>
+              <div class="field"><label>$/persona</label><input type="number" min="0" value="${tier.pricePerPerson}" onchange="updateTierField('${svc.id}', ${idx}, 'pricePerPerson', this.value)"></div>
+            </div>
+          `).join("")}
+          <button class="delete-svc-btn" onclick="deleteServiceFromCatalog('${svc.id}')">Eliminar servicio del catálogo</button>
+        </div>
+        ${isSelected ? `
+        <div style="padding-top: 10px; border-top: 1px dashed var(--border);">
+          <div style="font-size: 11px; font-weight: bold; color: var(--cyan); letter-spacing: 1px; margin-bottom: 8px;">SELECCIONA GENERACIONES · # PERSONAS Y HORAS</div>
+          <div style="font-size: 10.5px; color: var(--grey); margin-bottom: 10px;">
+            Tarifas: ${svc.tiers.map(t => `${t.min}-${t.max === 99999 ? '∞' : t.max} pers = ${formatMoney(t.pricePerPerson)}/p`).join(' · ')} · mínimo ${svc.minPersonas} personas
+          </div>
+          ${svc.generations.map(g => {
+            const gCfg = (cfg.generations && cfg.generations[g.id]) || { enabled: false, personas: svc.minPersonas, hours: baseHours };
+            const personas = gCfg.personas || svc.minPersonas;
+            const hours = gCfg.hours || baseHours;
+            const tierPrice = getTierPrice(svc.tiers, personas);
+            const hoursMul = hours / baseHours;
+            const gTotal = gCfg.enabled ? tierPrice * personas * hoursMul : 0;
+            const belowMin = personas < svc.minPersonas;
+            return `
+              <div style="margin-bottom: 8px; padding: 10px 12px; background: ${gCfg.enabled ? 'rgba(2,193,244,0.06)' : '#fff'}; border: 1px solid ${gCfg.enabled ? 'var(--cyan)' : 'var(--border)'}; border-radius: 6px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                  <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; flex: 1; min-width: 0;">
+                    <input type="checkbox" ${gCfg.enabled ? 'checked' : ''} onchange="toggleGenerationInGroup('${svc.id}', '${g.id}', this.checked)" style="accent-color: var(--cyan); width: 18px; height: 18px; flex-shrink: 0;">
+                    <div style="min-width: 0; flex: 1;">
+                      <div style="font-weight: 600; font-size: 13px;">${g.label}</div>
+                      ${gCfg.enabled ? `<div style="font-size: 10.5px; color: var(--cyan); margin-top: 2px;">Tarifa actual: ${formatMoney(tierPrice)} × ${personas} pers. ${hoursMul !== 1 ? `× ${hoursMul.toFixed(2)} (${hours}h/${baseHours}h)` : ''}</div>` : ''}
+                    </div>
+                  </label>
+                  ${gCfg.enabled ? `<div style="font-weight: bold; color: var(--cyan); font-size: 13px; min-width: 90px; text-align: right;">${formatMoney(gTotal)}</div>` : ''}
+                </div>
+                ${gCfg.enabled ? `
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; padding-top: 8px; border-top: 1px dashed #ddd;">
+                  <div class="field">
+                    <label># Personas</label>
+                    <input type="number" min="1" value="${gCfg.personas}" onchange="updateGenerationField('${svc.id}', '${g.id}', 'personas', this.value)" style="${belowMin ? 'border-color: var(--red); background: rgba(220,38,38,0.05);' : ''}">
+                    ${belowMin ? `<div style="font-size: 10px; color: var(--red); margin-top: 3px;">⚠ Mínimo ${svc.minPersonas} personas</div>` : ''}
+                  </div>
+                  <div class="field">
+                    <label>Duración</label>
+                    <select onchange="updateGenerationField('${svc.id}', '${g.id}', 'hours', this.value)">
+                      <option value="2" ${hours === 2 ? 'selected' : ''}>2 horas</option>
+                      <option value="4" ${hours === 4 ? 'selected' : ''}>4 horas</option>
+                      <option value="6" ${hours === 6 ? 'selected' : ''}>6 horas</option>
+                    </select>
+                  </div>
+                </div>
+                ` : ''}
+              </div>
+            `;
+          }).join("")}
+        </div>
+        <div class="service-line-total"><span class="label">SUBTOTAL DEL SERVICIO</span>${formatMoney(lineTotal)}</div>
+        ` : ''}
+      </div>`;
+  }
+
+  // ==== FAMILY SESSION (Retiros familiares — cobro por familia) ====
+  if (svc.type === "family-session") {
+    const cfg = sel || { familias: 30 };
+    return `
+      <div class="service-card ${isSelected ? 'selected' : ''}">
+        ${cardHead(svc, isSelected)}
+        <div class="admin-only admin-config-box">
+          <div class="admin-config-label">CONFIG BASE (ADMIN)</div>
+          <div class="field"><label>Precio por familia (MXN)</label><input type="number" min="0" value="${svc.pricePerFamily}" onchange="updateCatalogField('${svc.id}', 'pricePerFamily', this.value)"></div>
+          <button class="delete-svc-btn" onclick="deleteServiceFromCatalog('${svc.id}')">Eliminar servicio del catálogo</button>
+        </div>
+        ${isSelected ? `
+        <div class="service-controls" style="grid-template-columns: 1fr 1fr 1fr;">
+          <div class="field"><label># Familias</label><input type="number" min="1" value="${cfg.familias}" onchange="updateSelectedField('${svc.id}', 'familias', this.value)"></div>
+          <div class="field" style="opacity: 0.7;"><label>Precio por familia</label><input type="text" value="${formatMoney(svc.pricePerFamily)}" disabled></div>
+          <div class="field" style="opacity: 0.7;"><label>Total del servicio</label><input type="text" value="${formatMoney(lineTotal)}" disabled></div>
+        </div>
+        <div class="service-line-total"><span class="label">SUBTOTAL · ${cfg.familias} familias</span>${formatMoney(lineTotal)}</div>
+        ` : ''}
+      </div>`;
+  }
+
+  // ==== STRATEGIC SESSIONS (Sesiones de planeación estratégica — # sesiones × horas × $/h) ====
+  if (svc.type === "strategic-sessions") {
+    const cfg = sel || { numSessions: 1, hoursPerSession: svc.defaultHours || 4 };
+    const num = cfg.numSessions || 1;
+    const hours = cfg.hoursPerSession || svc.defaultHours || 4;
+    const totalHours = num * hours;
     return `
       <div class="service-card ${isSelected ? 'selected' : ''}">
         ${cardHead(svc, isSelected)}
         <div class="admin-only admin-config-box">
           <div class="admin-config-label">CONFIG BASE (ADMIN)</div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-            <div class="field"><label>Precio por sesión (MXN)</label><input type="number" min="0" value="${svc.pricePerSession}" onchange="updateCatalogField('${svc.id}', 'pricePerSession', this.value)"></div>
-            <div class="field"><label>Descuento al tomar las ${svc.sessions.length} (%)</label><input type="number" min="0" max="50" value="${svc.bundleDiscountPct}" onchange="updateCatalogField('${svc.id}', 'bundleDiscountPct', this.value)"></div>
-          </div>
-          <button class="delete-svc-btn" onclick="deleteServiceFromCatalog('${svc.id}')">Eliminar servicio del catálogo</button>
-        </div>
-        ${isSelected ? `
-        <div style="padding: 10px 0; border-top: 1px dashed var(--border);">
-          <div style="font-size: 11px; font-weight: bold; color: var(--cyan); letter-spacing: 1px; margin-bottom: 8px;">SELECCIONA LAS SESIONES INCLUIDAS</div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
-            ${svc.sessions.map(sess => {
-              const checked = (cfg.selectedSessions || []).includes(sess.id);
-              return `<label style="display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: ${checked ? 'rgba(2,193,244,0.08)' : '#fff'}; border: 1px solid ${checked ? 'var(--cyan)' : 'var(--border)'}; border-radius: 4px; cursor: pointer; font-size: 12px;">
-                <input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleSessionInPackage('${svc.id}', '${sess.id}', this.checked)" style="accent-color: var(--cyan);">
-                <span>${sess.label}</span>
-              </label>`;
-            }).join("")}
-          </div>
-          ${isFullBundle && svc.bundleDiscountPct > 0 ? `<div style="margin-top: 8px; padding: 8px; background: rgba(2,193,244,0.08); border-left: 3px solid var(--cyan); font-size: 11px; color: var(--black);"><strong style="color: var(--cyan);">✓ PAQUETE COMPLETO</strong> · Descuento del ${svc.bundleDiscountPct}% aplicado</div>` : ''}
-          ${!isFullBundle && numSelected > 0 ? `<div style="margin-top: 8px; padding: 8px; background: #fff8e6; border-left: 3px solid #f0c000; font-size: 11px; color: #8a6500;">${numSelected} de ${svc.sessions.length} sesiones · contrata todas para obtener ${svc.bundleDiscountPct}% de descuento</div>` : ''}
-        </div>
-        <div class="service-line-total">
-          ${isFullBundle && svc.bundleDiscountPct > 0 ? `<span style="font-size: 11px; color: var(--grey); text-decoration: line-through; margin-right: 8px;">${formatMoney(subtotalSinDesc)}</span>` : ''}
-          <span class="label">SUBTOTAL · ${numSelected} sesión${numSelected !== 1 ? 'es' : ''}</span>${formatMoney(lineTotal)}
-        </div>
-        ` : ''}
-      </div>`;
-  }
-
-  // ==== STANDARD SESSIONS (sesiones genéricas, descuento al alcanzar bundle) ====
-  if (svc.type === "standard-sessions") {
-    const cfg = sel || { numSessions: 1 };
-    const num = cfg.numSessions || 1;
-    const isFullBundle = svc.bundleSize && num >= svc.bundleSize;
-    const subtotalSinDesc = (svc.pricePerSession || 0) * num;
-    return `
-      <div class="service-card ${isSelected ? 'selected' : ''}">
-        ${cardHead(svc, isSelected)}
-        <div class="admin-only admin-config-box">
-          <div class="admin-config-label">CONFIG BASE (ADMIN)</div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
-            <div class="field"><label>Precio por sesión (MXN)</label><input type="number" min="0" value="${svc.pricePerSession}" onchange="updateCatalogField('${svc.id}', 'pricePerSession', this.value)"></div>
-            <div class="field"><label>Tamaño paquete</label><input type="number" min="1" value="${svc.bundleSize}" onchange="updateCatalogField('${svc.id}', 'bundleSize', this.value)"></div>
-            <div class="field"><label>Descuento paquete (%)</label><input type="number" min="0" max="50" value="${svc.bundleDiscountPct}" onchange="updateCatalogField('${svc.id}', 'bundleDiscountPct', this.value)"></div>
+            <div class="field"><label>Precio por hora (MXN)</label><input type="number" min="0" value="${svc.pricePerHour}" onchange="updateCatalogField('${svc.id}', 'pricePerHour', this.value)"></div>
+            <div class="field"><label>Horas default por sesión</label><input type="number" min="1" value="${svc.defaultHours}" onchange="updateCatalogField('${svc.id}', 'defaultHours', this.value)"></div>
           </div>
           <button class="delete-svc-btn" onclick="deleteServiceFromCatalog('${svc.id}')">Eliminar servicio del catálogo</button>
         </div>
         ${isSelected ? `
         <div class="service-controls" style="grid-template-columns: 1fr 1fr 1fr;">
           <div class="field"><label># Sesiones</label><input type="number" min="1" value="${num}" onchange="updateSelectedField('${svc.id}', 'numSessions', this.value)"></div>
-          <div class="field" style="opacity: 0.7;"><label>Precio por sesión</label><input type="text" value="${formatMoney(svc.pricePerSession)}" disabled></div>
-          <div class="field" style="opacity: 0.7;"><label>Subtotal</label><input type="text" value="${formatMoney(lineTotal)}" disabled></div>
+          <div class="field"><label>Horas por sesión</label><input type="number" min="1" max="12" value="${hours}" onchange="updateSelectedField('${svc.id}', 'hoursPerSession', this.value)"></div>
+          <div class="field" style="opacity: 0.7;"><label>Total horas</label><input type="text" value="${totalHours} horas" disabled></div>
         </div>
-        ${isFullBundle && svc.bundleDiscountPct > 0 ? `<div style="margin-top: 8px; padding: 8px; background: rgba(2,193,244,0.08); border-left: 3px solid var(--cyan); font-size: 11px; color: var(--black);"><strong style="color: var(--cyan);">✓ PAQUETE</strong> · ${num} sesiones · descuento del ${svc.bundleDiscountPct}% aplicado</div>` : ''}
-        ${!isFullBundle && svc.bundleSize > 0 ? `<div style="margin-top: 8px; padding: 8px; background: #fff8e6; border-left: 3px solid #f0c000; font-size: 11px; color: #8a6500;">Contrata ${svc.bundleSize}+ sesiones para obtener ${svc.bundleDiscountPct}% de descuento</div>` : ''}
-        <div class="service-line-total">
-          ${isFullBundle && svc.bundleDiscountPct > 0 ? `<span style="font-size: 11px; color: var(--grey); text-decoration: line-through; margin-right: 8px;">${formatMoney(subtotalSinDesc)}</span>` : ''}
-          <span class="label">SUBTOTAL DEL SERVICIO</span>${formatMoney(lineTotal)}
+        <div class="service-line-total"><span class="label">SUBTOTAL · ${num} sesión${num !== 1 ? 'es' : ''} × ${hours}h × ${formatMoney(svc.pricePerHour)}/h</span>${formatMoney(lineTotal)}</div>
+        ` : ''}
+      </div>`;
+  }
+
+  // ==== CONSULTING EVENT (Desarrollo de equipos de alto rendimiento — cálculo automático) ====
+  if (svc.type === "consulting-event") {
+    const cfg = sel || { personas: svc.defaultPersonas || 8, hours: svc.defaultHours || 4 };
+    const personas = cfg.personas || svc.defaultPersonas || 8;
+    const hours = cfg.hours || svc.defaultHours || 4;
+    const numFacs = calcNumFacilitators(personas);
+    return `
+      <div class="service-card ${isSelected ? 'selected' : ''}">
+        ${cardHead(svc, isSelected)}
+        <div class="admin-only admin-config-box">
+          <div class="admin-config-label">CONFIG BASE (ADMIN) · CONSULTORÍA HOUP</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+            <div class="field"><label>Tarifa hora facilitador (MXN)</label><input type="number" min="0" value="${svc.facilitatorHourlyRate}" onchange="updateCatalogField('${svc.id}', 'facilitatorHourlyRate', this.value)"></div>
+            <div class="field"><label>Tarifa hora planeación (MXN)</label><input type="number" min="0" value="${svc.planningHourlyRate}" onchange="updateCatalogField('${svc.id}', 'planningHourlyRate', this.value)"></div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+            <div class="field"><label>Materiales por persona (MXN)</label><input type="number" min="0" value="${svc.materialsPerPerson}" onchange="updateCatalogField('${svc.id}', 'materialsPerPerson', this.value)"></div>
+            <div class="field"><label>Horas planeación (× evento)</label><input type="number" min="1" step="0.5" value="${svc.planningHoursMultiplier}" onchange="updateCatalogField('${svc.id}', 'planningHoursMultiplier', this.value)"></div>
+            <div class="field"><label>% Utilidad sobre costo</label><input type="number" min="0" max="200" value="${svc.utilityPct}" onchange="updateCatalogField('${svc.id}', 'utilityPct', this.value)"></div>
+          </div>
+          <div style="font-size: 10.5px; color: #8a6500; margin-top: 8px; font-style: italic;">
+            Regla de facilitadores: 1 fac ≤4 pers · 2 facs 5-20 pers · +1 fac cada 20 pers extras
+          </div>
+          <button class="delete-svc-btn" onclick="deleteServiceFromCatalog('${svc.id}')">Eliminar servicio del catálogo</button>
         </div>
+        ${isSelected ? `
+        <div class="service-controls" style="grid-template-columns: 1fr 1fr 1fr;">
+          <div class="field"><label># Personas</label><input type="number" min="1" value="${personas}" onchange="updateSelectedField('${svc.id}', 'personas', this.value)"></div>
+          <div class="field"><label>Duración del evento (horas)</label><input type="number" min="1" max="48" step="0.5" value="${hours}" onchange="updateSelectedField('${svc.id}', 'hours', this.value)"></div>
+          <div class="field" style="opacity: 0.8;"><label>Facilitadores requeridos</label><input type="text" value="${numFacs} ${numFacs === 1 ? 'facilitador' : 'facilitadores'}" disabled></div>
+        </div>
+        <div style="margin-top: 8px; padding: 10px 12px; background: rgba(2,193,244,0.06); border-left: 3px solid var(--cyan); border-radius: 4px; font-size: 11.5px;">
+          <div style="color: var(--cyan); font-weight: bold; letter-spacing: 1px; margin-bottom: 4px;">PRECIO DE VENTA AL CLIENTE</div>
+          <div style="font-size: 22px; font-weight: bold; color: var(--black);">${formatMoney(lineTotal)}</div>
+          <div style="color: var(--grey); font-size: 11px; margin-top: 4px;">Incluye planeación, facilitadores, materiales y margen de utilidad</div>
+        </div>
+        <div class="service-line-total"><span class="label">SUBTOTAL DEL SERVICIO</span>${formatMoney(lineTotal)}</div>
         ` : ''}
       </div>`;
   }
@@ -861,6 +956,17 @@ function updateGenerationCatalogField(svcId, genId, field, value) {
   updateTotals();
 }
 
+// Update tier field para integration-tiered (rangos de personas y precios)
+function updateTierField(svcId, tierIdx, field, value) {
+  const svc = state.catalog.find(s => s.id === svcId);
+  if (!svc || !svc.tiers || !svc.tiers[tierIdx]) return;
+  const num = parseFloat(value);
+  svc.tiers[tierIdx][field] = isNaN(num) ? value : num;
+  saveCatalogToStorage();
+  renderServices();
+  updateTotals();
+}
+
 // ==================== EVENT MANAGEMENT ====================
 function renderEventMgmt() {
   const container = document.getElementById("event-mgmt-container");
@@ -943,6 +1049,40 @@ function calcDocenteCost(svc, cfg) {
   if (compartido) return svc.docenteDosTurnosMensual * meses;
   return svc.docenteUnTurnoMensual * meses * 2;
 }
+// Encuentra la tarifa por persona según tier (basado en # personas)
+function getTierPrice(tiers, personas) {
+  if (!tiers || !tiers.length) return 0;
+  for (const t of tiers) {
+    if (personas >= t.min && personas <= t.max) return t.pricePerPerson || 0;
+  }
+  // Si no encaja en ningún tier (ej. personas < minPersonas), usa el primer tier
+  return tiers[0].pricePerPerson || 0;
+}
+
+// Calcula # de facilitadores según # personas (regla HOUP)
+function calcNumFacilitators(personas) {
+  if (personas <= 4) return 1;
+  if (personas <= 20) return 2;
+  // +1 facilitador por cada 20 personas adicionales después de 20
+  return 2 + Math.ceil((personas - 20) / 20);
+}
+
+// Calcula precio de venta de un consulting-event con planeación, facilitadores, materiales y utilidad
+function calcConsultingEvent(svc, cfg) {
+  const personas = cfg.personas || svc.defaultPersonas || 8;
+  const hours = cfg.hours || svc.defaultHours || 4;
+  const numFacs = calcNumFacilitators(personas);
+
+  const planningCost = (svc.planningHourlyRate || 0) * hours * (svc.planningHoursMultiplier || 2);
+  const facilitatorsCost = (svc.facilitatorHourlyRate || 0) * hours * numFacs;
+  const materialsCost = (svc.materialsPerPerson || 0) * personas;
+  const baseCost = planningCost + facilitatorsCost + materialsCost;
+
+  const utilityPct = svc.utilityPct || 65;
+  const salePrice = baseCost * (1 + utilityPct / 100);
+  return salePrice;
+}
+
 function calcServiceTotal(svc, cfg) {
   if (svc.type === "fundacion-programa") {
     const docenteCost = calcDocenteCost(svc, cfg);
@@ -955,24 +1095,6 @@ function calcServiceTotal(svc, cfg) {
   }
   if (svc.type === "mailing") {
     return (svc.pricePerEmail || 0) * (cfg.emailsPerMonth || 1) * (cfg.months || 10);
-  }
-  if (svc.type === "session-package") {
-    const numSelected = (cfg.selectedSessions || []).length;
-    const subtotal = (svc.pricePerSession || 0) * numSelected;
-    // Descuento si todas las sesiones están seleccionadas
-    if (numSelected === svc.sessions.length && svc.bundleDiscountPct > 0) {
-      return subtotal * (1 - svc.bundleDiscountPct / 100);
-    }
-    return subtotal;
-  }
-  if (svc.type === "standard-sessions") {
-    const num = cfg.numSessions || 1;
-    const subtotal = (svc.pricePerSession || 0) * num;
-    // Descuento al alcanzar bundleSize
-    if (svc.bundleSize && num >= svc.bundleSize && svc.bundleDiscountPct > 0) {
-      return subtotal * (1 - svc.bundleDiscountPct / 100);
-    }
-    return subtotal;
   }
   if (svc.type === "multi-stage") {
     let total = 0;
@@ -987,6 +1109,34 @@ function calcServiceTotal(svc, cfg) {
     });
     return total;
   }
+  if (svc.type === "integration-tiered") {
+    // Cada generación se calcula con su tarifa de tier individual + horas (ratio sobre 4h base)
+    let total = 0;
+    const baseHours = svc.defaultHours || 4;
+    svc.generations.forEach(g => {
+      const gCfg = cfg.generations && cfg.generations[g.id];
+      if (!gCfg || !gCfg.enabled) return;
+      const personas = gCfg.personas || svc.minPersonas || 50;
+      const hours = gCfg.hours || baseHours;
+      const tierPrice = getTierPrice(svc.tiers, personas);
+      // Las horas escalan linealmente sobre la base de 4h
+      const hoursMultiplier = hours / baseHours;
+      total += tierPrice * personas * hoursMultiplier;
+    });
+    return total;
+  }
+  if (svc.type === "family-session") {
+    return (svc.pricePerFamily || 0) * (cfg.familias || 0);
+  }
+  if (svc.type === "strategic-sessions") {
+    const num = cfg.numSessions || 1;
+    const hours = cfg.hoursPerSession || svc.defaultHours || 4;
+    return (svc.pricePerHour || 0) * hours * num;
+  }
+  if (svc.type === "consulting-event") {
+    return calcConsultingEvent(svc, cfg);
+  }
+  // viejo "generation-sessions" (compat)
   if (svc.type === "generation-sessions") {
     let total = 0;
     svc.generations.forEach(g => {
@@ -1021,25 +1171,34 @@ function defaultCfgFor(svc) {
       return { eventos: 1 };
     case "mailing":
       return { emailsPerMonth: svc.defaultEmailsPerMonth || 1, months: svc.defaultMonths || 10 };
-    case "session-package":
-      // operador puede des-seleccionar sesiones individualmente — default todas activas
-      return { selectedSessions: svc.sessions.map(s => s.id) };
-    case "standard-sessions":
-      return { numSessions: 1 };
     case "multi-stage":
-      // cada etapa: { enabled: false, mode: "flat"|"sessions", sessions: 1 }
       const stages = {};
       svc.stages.forEach(st => {
         stages[st.id] = { enabled: false, mode: "flat", sessions: 1 };
       });
       return { stages };
-    case "generation-sessions":
-      // cada generación: { enabled: false, personas: 30 }
+    case "integration-tiered": {
+      // cada generación: { enabled: false, personas: 50, hours: 4 }
+      const gens = {};
+      svc.generations.forEach(g => {
+        gens[g.id] = { enabled: false, personas: svc.minPersonas || 50, hours: svc.defaultHours || 4 };
+      });
+      return { generations: gens };
+    }
+    case "family-session":
+      return { familias: 30 };
+    case "strategic-sessions":
+      return { numSessions: 1, hoursPerSession: svc.defaultHours || 4 };
+    case "consulting-event":
+      return { personas: svc.defaultPersonas || 8, hours: svc.defaultHours || 4 };
+    // viejo "generation-sessions" (lo dejamos por compat, en realidad ya no se usa)
+    case "generation-sessions": {
       const gens = {};
       svc.generations.forEach(g => {
         gens[g.id] = { enabled: false, personas: 30 };
       });
       return { generations: gens };
+    }
     case "standard":
     default:
       return { personas: 30 };
@@ -1193,10 +1352,15 @@ function applyPreset(presetId) {
     state.presetApplied = null;
     document.getElementById("manual-discount").value = 0;
     renderPresets();
+    renderServices();
     updateTotals();
     return;
   }
-  state.selected = {};
+  // Limpia solo los servicios de Educación previos — preserva selecciones de Empresas/Fundación
+  Object.keys(state.selected).forEach(id => {
+    const svc = state.catalog.find(s => s.id === id);
+    if (svc && svc.cat === "Educación") delete state.selected[id];
+  });
   preset.services.forEach(svcId => {
     const svc = state.catalog.find(s => s.id === svcId);
     if (svc) {
@@ -1205,8 +1369,8 @@ function applyPreset(presetId) {
       if (svc.type === "mailing" && preset.mailingEmailsPerMonth) {
         cfg.emailsPerMonth = preset.mailingEmailsPerMonth;
       }
-      // Para generation-sessions: activar todas las generaciones cuando viene de preset
-      if (svc.type === "generation-sessions" && cfg.generations) {
+      // Para integration-tiered y generation-sessions: activar todas las generaciones
+      if ((svc.type === "integration-tiered" || svc.type === "generation-sessions") && cfg.generations) {
         Object.keys(cfg.generations).forEach(gid => {
           cfg.generations[gid].enabled = true;
         });
@@ -1225,8 +1389,8 @@ function applyPreset(presetId) {
 function renderVolumeInfo() {
   document.getElementById("volume-info-live").innerHTML = `
     <div style="font-size: 11px; color: #888; margin-bottom: 12px; padding: 10px; background: #1A1A1A; border-radius: 4px;">
-      <strong style="color: var(--cyan);">DESCUENTOS POR VOLUMEN</strong><br>
-      ${VOLUME_DISCOUNTS.slice().reverse().map(v => `• ${v.minServices}+ servicios → ${v.pct}%`).join("<br>")}
+      <strong style="color: var(--cyan);">DESCUENTO MANUAL</strong><br>
+      Aplica el descuento que decidas en cada cotización desde el campo de "Descuento manual override (%)" abajo.
     </div>`;
 }
 
@@ -1238,28 +1402,17 @@ function updateTotals() {
     return { svc, cfg, total: calcServiceTotal(svc, cfg) };
   }).filter(Boolean);
 
-  const numServices = services.length;
   let subtotal = services.reduce((acc, s) => acc + s.total, 0);
 
-  let volDisc = 0, volDiscPct = 0, volDiscLabel = "";
-  for (const tier of VOLUME_DISCOUNTS) {
-    if (numServices >= tier.minServices) {
-      volDiscPct = tier.pct;
-      volDiscLabel = tier.label;
-      volDisc = subtotal * (tier.pct / 100);
-      break;
-    }
-  }
-
+  // Solo descuento manual (definido por el operador)
   const manualDiscPct = parseFloat(document.getElementById("manual-discount").value) || 0;
-  if (state.presetApplied) { volDisc = 0; volDiscPct = 0; volDiscLabel = ""; }
-  const manualDisc = (subtotal - volDisc) * (manualDiscPct / 100);
+  const manualDisc = subtotal * (manualDiscPct / 100);
 
   const trips = parseInt(document.getElementById("travel-trips").value) || 0;
   const travelCost = parseFloat(document.getElementById("travel-cost").value) || 0;
   const travelTotal = trips * travelCost;
 
-  const houpSubAfterDisc = subtotal - volDisc - manualDisc + travelTotal;
+  const houpSubAfterDisc = subtotal - manualDisc + travelTotal;
   const applyIva = document.getElementById("apply-iva").value === "yes";
   const iva = applyIva ? houpSubAfterDisc * 0.16 : 0;
 
@@ -1285,17 +1438,22 @@ function updateTotals() {
       } else if (s.svc.type === "mailing") {
         const total = (s.cfg.emailsPerMonth || 1) * (s.cfg.months || 10);
         qtyText = `${total} correos · ${s.cfg.emailsPerMonth}/mes × ${s.cfg.months} meses`;
-      } else if (s.svc.type === "session-package") {
-        const num = (s.cfg.selectedSessions || []).length;
-        const isFull = num === s.svc.sessions.length;
-        qtyText = `${num} sesión${num !== 1 ? 'es' : ''}${isFull && s.svc.bundleDiscountPct > 0 ? ' (paquete -' + s.svc.bundleDiscountPct + '%)' : ''}`;
-      } else if (s.svc.type === "standard-sessions") {
-        const num = s.cfg.numSessions || 1;
-        const isFull = s.svc.bundleSize && num >= s.svc.bundleSize;
-        qtyText = `${num} sesión${num !== 1 ? 'es' : ''}${isFull && s.svc.bundleDiscountPct > 0 ? ' (paquete -' + s.svc.bundleDiscountPct + '%)' : ''}`;
       } else if (s.svc.type === "multi-stage") {
         const enabledStages = (s.cfg.stages ? Object.entries(s.cfg.stages).filter(([k, v]) => v.enabled) : []);
         qtyText = `${enabledStages.length} de ${s.svc.stages.length} etapas activas`;
+      } else if (s.svc.type === "integration-tiered") {
+        const enabledGens = s.svc.generations.filter(g => s.cfg.generations && s.cfg.generations[g.id] && s.cfg.generations[g.id].enabled);
+        const totalPersonas = enabledGens.reduce((acc, g) => acc + (s.cfg.generations[g.id].personas || 0), 0);
+        qtyText = `${enabledGens.length} generación${enabledGens.length === 1 ? '' : 'es'} · ${totalPersonas} personas en total`;
+      } else if (s.svc.type === "family-session") {
+        qtyText = `${s.cfg.familias} familias × ${formatMoney(s.svc.pricePerFamily)}`;
+      } else if (s.svc.type === "strategic-sessions") {
+        const num = s.cfg.numSessions || 1;
+        const hours = s.cfg.hoursPerSession || s.svc.defaultHours || 4;
+        qtyText = `${num} sesión${num !== 1 ? 'es' : ''} × ${hours}h × ${formatMoney(s.svc.pricePerHour)}/h`;
+      } else if (s.svc.type === "consulting-event") {
+        const numFacs = calcNumFacilitators(s.cfg.personas || 8);
+        qtyText = `${s.cfg.personas} personas · ${s.cfg.hours}h · ${numFacs} facilitador${numFacs !== 1 ? 'es' : ''}`;
       } else if (s.svc.type === "generation-sessions") {
         const enabledGens = s.svc.generations.filter(g => s.cfg.generations && s.cfg.generations[g.id] && s.cfg.generations[g.id].enabled);
         const totalPersonas = enabledGens.reduce((acc, g) => acc + (s.cfg.generations[g.id].personas || 0), 0);
@@ -1314,17 +1472,10 @@ function updateTotals() {
 
   document.getElementById("subtotal").textContent = formatMoney(subtotal);
 
-  const rowVol = document.getElementById("row-vol-disc");
-  if (volDisc > 0) {
-    rowVol.style.display = "flex";
-    document.getElementById("vol-disc-label").textContent = `Desc. volumen (${volDiscLabel} · ${volDiscPct}%)`;
-    document.getElementById("vol-disc-amount").textContent = `−${formatMoney(volDisc)}`;
-  } else { rowVol.style.display = "none"; }
-
   const rowMan = document.getElementById("row-manual-disc");
   if (manualDisc > 0) {
     rowMan.style.display = "flex";
-    document.getElementById("manual-disc-label").textContent = state.presetApplied ? `Desc. paquete (${manualDiscPct}%)` : `Desc. manual (${manualDiscPct}%)`;
+    document.getElementById("manual-disc-label").textContent = `Desc. manual (${manualDiscPct}%)`;
     document.getElementById("manual-disc-amount").textContent = `−${formatMoney(manualDisc)}`;
   } else { rowMan.style.display = "none"; }
 
@@ -1348,7 +1499,7 @@ function updateTotals() {
 
   document.getElementById("grand-total").textContent = formatMoney(grandTotal);
 
-  updatePrintSummary({ services, subtotal, volDisc, volDiscPct, volDiscLabel, manualDisc, manualDiscPct, travelTotal, iva, eventMgmtTotal, grandTotal, applyIva, em });
+  updatePrintSummary({ services, subtotal, manualDisc, manualDiscPct, travelTotal, iva, eventMgmtTotal, grandTotal, applyIva, em });
   updatePrint();
 }
 
@@ -1388,18 +1539,25 @@ function updatePrintSummary(data) {
       } else if (s.svc.type === "mailing") {
         const total = (s.cfg.emailsPerMonth || 1) * (s.cfg.months || 10);
         qtyText = `${total} correos en total · ${s.cfg.emailsPerMonth} al mes × ${s.cfg.months} meses · ${formatMoney(s.svc.pricePerEmail)} por correo`;
-      } else if (s.svc.type === "session-package") {
-        const sel = s.cfg.selectedSessions || [];
-        const sessionLabels = s.svc.sessions.filter(ss => sel.includes(ss.id)).map(ss => ss.label).join(' · ');
-        const isFull = sel.length === s.svc.sessions.length;
-        qtyText = `${sessionLabels}${isFull && s.svc.bundleDiscountPct > 0 ? ' · paquete completo con descuento ' + s.svc.bundleDiscountPct + '%' : ''}`;
-      } else if (s.svc.type === "standard-sessions") {
-        const num = s.cfg.numSessions || 1;
-        const isFull = s.svc.bundleSize && num >= s.svc.bundleSize;
-        qtyText = `${num} sesión${num !== 1 ? 'es' : ''} × ${formatMoney(s.svc.pricePerSession)}${isFull && s.svc.bundleDiscountPct > 0 ? ' · paquete con descuento ' + s.svc.bundleDiscountPct + '%' : ''}`;
       } else if (s.svc.type === "multi-stage") {
         const enabled = s.svc.stages.filter(st => s.cfg.stages && s.cfg.stages[st.id] && s.cfg.stages[st.id].enabled);
         qtyText = `${enabled.length} de ${s.svc.stages.length} etapas: ${enabled.map(st => st.label.split('·')[0].trim()).join(' · ')}`;
+      } else if (s.svc.type === "integration-tiered") {
+        const enabled = s.svc.generations.filter(g => s.cfg.generations && s.cfg.generations[g.id] && s.cfg.generations[g.id].enabled);
+        const desglose = enabled.map(g => {
+          const gc = s.cfg.generations[g.id];
+          return `${g.label.split('·')[0].trim()}: ${gc.personas} pers · ${gc.hours}h`;
+        }).join(' · ');
+        qtyText = `${enabled.length} generaci${enabled.length === 1 ? 'ón' : 'ones'} — ${desglose}`;
+      } else if (s.svc.type === "family-session") {
+        qtyText = `${s.cfg.familias} familias × ${formatMoney(s.svc.pricePerFamily)} por familia`;
+      } else if (s.svc.type === "strategic-sessions") {
+        const num = s.cfg.numSessions || 1;
+        const hours = s.cfg.hoursPerSession || s.svc.defaultHours || 4;
+        qtyText = `${num} sesión${num !== 1 ? 'es' : ''} × ${hours} horas por sesión × ${formatMoney(s.svc.pricePerHour)}/h (${num * hours}h totales)`;
+      } else if (s.svc.type === "consulting-event") {
+        const numFacs = calcNumFacilitators(s.cfg.personas || 8);
+        qtyText = `${s.cfg.personas} personas · ${s.cfg.hours} horas · ${numFacs} facilitador${numFacs !== 1 ? 'es' : ''} · planeación, materiales y utilidad incluidos`;
       } else if (s.svc.type === "generation-sessions") {
         const enabled = s.svc.generations.filter(g => s.cfg.generations && s.cfg.generations[g.id] && s.cfg.generations[g.id].enabled);
         const desglose = enabled.map(g => `${g.label.split('·')[0].trim()}: ${s.cfg.generations[g.id].personas} pers.`).join(' · ');
@@ -1420,7 +1578,6 @@ function updatePrintSummary(data) {
   html += `<div style="margin-top: 24px; padding-top: 14px; border-top: 2px solid var(--black);">`;
   if (data.services.length > 0) {
     html += `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;"><span>Subtotal servicios HOUP</span><span>${formatMoney(data.subtotal)}</span></div>`;
-    if (data.volDisc > 0) html += `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;color:var(--cyan);"><span>Desc. volumen (${data.volDiscLabel} · ${data.volDiscPct}%)</span><span>−${formatMoney(data.volDisc)}</span></div>`;
     if (data.manualDisc > 0) html += `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;color:var(--cyan);"><span>Descuento aplicado (${data.manualDiscPct}%)</span><span>−${formatMoney(data.manualDisc)}</span></div>`;
     if (data.travelTotal > 0) html += `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;"><span>Viáticos</span><span>${formatMoney(data.travelTotal)}</span></div>`;
     if (data.iva > 0) html += `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;"><span>IVA 16% (sobre servicios HOUP)</span><span>${formatMoney(data.iva)}</span></div>`;
