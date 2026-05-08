@@ -198,12 +198,12 @@
     </div>
 
     <div class="section no-print">
-      <div class="section-eyebrow">02 · PRESETS DE PAQUETES (OPCIONAL)</div>
-      <div class="section-title">Estructura de paquete recomendada</div>
-      <div class="section-sub">Aplica un paquete base como punto de partida — luego puedes ajustar los servicios. El descuento se aplicará automáticamente.</div>
+      <div class="section-eyebrow">02 · DESCUENTOS POR PAQUETE (OPCIONAL)</div>
+      <div class="section-title">¿Es paquete Esencial, Integral o Completo?</div>
+      <div class="section-sub">Selecciona el nivel de paquete y aplicaremos el descuento correspondiente sobre la cotización. Los servicios los eliges tú abajo a la medida.</div>
       <div class="presets" id="presets"></div>
       <div style="font-size: 11px; color: var(--grey); font-style: italic;">
-        Tip: También puedes ignorar los presets y armar la cotización a la medida — el descuento por volumen se aplicará automáticamente según el número de servicios contratados.
+        Tip: si la cotización no entra en ninguno de estos 3 niveles, déjalo sin seleccionar y aplica un descuento manual personalizado en la sección de abajo.
       </div>
     </div>
 
@@ -297,7 +297,7 @@ const ADMIN_PASSWORD = "houp2026";
 
 // Cuando se hagan cambios al SERVICES_CATALOG, incrementa este número.
 // Esto invalida el cache del navegador y carga el nuevo catálogo del archivo.
-const CATALOG_VERSION = 7;
+const CATALOG_VERSION = 8;
 
 // SERVICIOS — modelo flexible:
 // type "standard" = precio por persona
@@ -313,7 +313,7 @@ const CATALOG_VERSION = 7;
 
 const SERVICES_CATALOG = [
   // --- EDUCACIÓN ---
-  { id: "edu-cap-doc", cat: "Educación", name: "Capacitación a docentes en psicología positiva", detail: "Curso introductorio basado en Discovering Positive Education", type: "standard", pricePerPerson: 0 },
+  { id: "edu-cap-doc", cat: "Educación", name: "Capacitación a docentes en psicología positiva", detail: "Curso introductorio basado en Discovering Positive Education · cobro por sesión completa", type: "flat", flatPrice: 0, unitLabel: "por sesión" },
   { id: "edu-conf-fam", cat: "Educación", name: "Conferencia general a familias", detail: "Conferencia presencial de alineación + sensibilización · cobro fijo, no escala con asistentes", type: "flat", flatPrice: 0, unitLabel: "por conferencia" },
   { id: "edu-mailing", cat: "Educación", name: "Mailing campaign a familias", detail: "Boletín de sensibilización en psicología positiva · cobro por correo enviado", type: "mailing", pricePerEmail: 0, defaultEmailsPerMonth: 1, defaultMonths: 10 },
   {
@@ -415,10 +415,12 @@ const SERVICES_CATALOG = [
   { id: "fun-voluntariado", cat: "Fundación", name: "Voluntariado corporativo", detail: "HOUP organiza experiencia de voluntariado para empleados de empresas", type: "standard", pricePerPerson: 0 }
 ];
 
+// Los paquetes ya NO auto-seleccionan servicios.
+// Solo aplican un % de descuento manual sobre la cotización que el operador arme.
 const PRESETS = [
-  { id: "esencial", tag: "ESENCIAL", name: "El arranque", desc: "Capacitación docente + conferencia a padres + mailing 1×/mes. (Solo Educación)", services: ["edu-cap-doc", "edu-conf-fam", "edu-mailing"], discountPct: 0, mailingEmailsPerMonth: 1 },
-  { id: "integral", tag: "INTEGRAL", name: "El más elegido", desc: "Esencial + sesiones de integración por generación. (Solo Educación)", services: ["edu-cap-doc", "edu-conf-fam", "edu-mailing", "edu-int-gen"], discountPct: 8, mailingEmailsPerMonth: 1 },
-  { id: "completo", tag: "COMPLETO", name: "Plan integrador", desc: "Todos los componentes de Educación + retiros familiares · mailing 2×/mes.", services: ["edu-cap-doc", "edu-conf-fam", "edu-mailing", "edu-int-gen", "edu-fam-padre-hijo", "edu-fam-madre-hijo", "edu-fam-toda"], discountPct: 16, mailingEmailsPerMonth: 2 }
+  { id: "esencial", tag: "ESENCIAL", name: "El arranque", desc: "Descuento mínimo · paquete de entrada con servicios básicos.", discountPct: 0 },
+  { id: "integral", tag: "INTEGRAL", name: "El más elegido", desc: "Descuento medio · paquete con varios servicios contratados.", discountPct: 8 },
+  { id: "completo", tag: "COMPLETO", name: "Plan integrador", desc: "Descuento mayor · paquete con la mayoría de servicios HOUP activados.", discountPct: 16 }
 ];
 
 const EVENT_MGMT_FEE_DEFAULT = 15;
@@ -1348,40 +1350,18 @@ function renderPresets() {
 function applyPreset(presetId) {
   const preset = PRESETS.find(p => p.id === presetId);
   if (!preset) return;
+  // Si ya estaba aplicado, lo des-aplicamos
   if (state.presetApplied === presetId) {
     state.presetApplied = null;
     document.getElementById("manual-discount").value = 0;
     renderPresets();
-    renderServices();
     updateTotals();
     return;
   }
-  // Limpia solo los servicios de Educación previos — preserva selecciones de Empresas/Fundación
-  Object.keys(state.selected).forEach(id => {
-    const svc = state.catalog.find(s => s.id === id);
-    if (svc && svc.cat === "Educación") delete state.selected[id];
-  });
-  preset.services.forEach(svcId => {
-    const svc = state.catalog.find(s => s.id === svcId);
-    if (svc) {
-      const cfg = defaultCfgFor(svc);
-      // Override mailing emailsPerMonth from preset if defined
-      if (svc.type === "mailing" && preset.mailingEmailsPerMonth) {
-        cfg.emailsPerMonth = preset.mailingEmailsPerMonth;
-      }
-      // Para integration-tiered y generation-sessions: activar todas las generaciones
-      if ((svc.type === "integration-tiered" || svc.type === "generation-sessions") && cfg.generations) {
-        Object.keys(cfg.generations).forEach(gid => {
-          cfg.generations[gid].enabled = true;
-        });
-      }
-      state.selected[svcId] = cfg;
-    }
-  });
+  // Solo aplicamos el % de descuento — NO tocamos los servicios seleccionados
   state.presetApplied = presetId;
   document.getElementById("manual-discount").value = preset.discountPct;
   renderPresets();
-  renderServices();
   updateTotals();
 }
 
