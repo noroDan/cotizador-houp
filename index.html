@@ -297,7 +297,7 @@ const ADMIN_PASSWORD = "houp2026";
 
 // Cuando se hagan cambios al SERVICES_CATALOG, incrementa este número.
 // Esto invalida el cache del navegador y carga el nuevo catálogo del archivo.
-const CATALOG_VERSION = 9;
+const CATALOG_VERSION = 10;
 
 // SERVICIOS — modelo flexible:
 // type "standard" = precio por persona
@@ -343,20 +343,16 @@ const SERVICES_CATALOG = [
   { id: "edu-fam-toda", cat: "Educación", name: "Retiro familiar — 7° secundaria (toda la familia)", detail: "Hito de integración familiar para entrada a secundaria · cobro por familia completa", type: "family-session", pricePerFamily: 0 },
   {
     id: "edu-curso-optativo", cat: "Educación",
-    name: "Curso optativo escolar (semestral)",
-    detail: "Curso optativo de psicología positiva impartido semanalmente · cotización anual · diseño desde cero + ejecución + manuales + proyecto social",
+    name: "Curso optativo escolar (anual)",
+    detail: "Curso optativo de psicología positiva impartido semanalmente · cotización anual · S1 con planeación intensiva + S2 ejecución",
     type: "optional-course",
-    teacherHourlyRate: 600,         // tarifa hora docente impartiendo
-    planningHourlyRate: 800,        // tarifa hora planeación (más alta)
-    manualUnitCost: 160,            // costo de producir cada manual
-    utilityPct: 65,                 // % utilidad sobre costo
-    // Defaults Tonalli
-    defaultSessionsS1: 15,
-    defaultSessionsS2: 14,
-    defaultSessionDuration: 1.33,   // 1h 20min = 1.33h
-    defaultPlanningHoursS1: 40,     // diseño intensivo desde cero
-    defaultPlanningHoursS2: 10,     // ajustes y mejoras
-    defaultManuals: 20
+    teacherMonthlySalary: 2000,    // agregado a nómina mensual de la maestra
+    monthsInCycle: 10,             // meses del ciclo escolar
+    planningHourlyRate: 800,       // tarifa hora planeación
+    planningHoursS1: 40,           // horas planeación S1 (creación desde cero)
+    manualUnitCost: 160,           // costo de producir cada manual
+    defaultStudents: 20,           // # alumnos por default
+    utilityPct: 65                 // % utilidad sobre costo
   },
 
   // --- EMPRESAS ---
@@ -787,7 +783,7 @@ function renderServiceCard(svc) {
       </div>`;
   }
 
-  // ==== OPTIONAL COURSE (Curso optativo escolar — cotización anual con S1 + S2) ====
+  // ==== OPTIONAL COURSE (Curso optativo escolar — anual, maestra fija + planeación S1 + manuales) ====
   if (svc.type === "optional-course") {
     const cfg = sel || defaultCfgFor(svc);
     const breakdown = isSelected ? calcOptionalCourse(svc, cfg) : null;
@@ -797,50 +793,37 @@ function renderServiceCard(svc) {
         <div class="admin-only admin-config-box">
           <div class="admin-config-label">CONFIG BASE (ADMIN) · CURSO OPTATIVO</div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
-            <div class="field"><label>Tarifa hora docente (MXN)</label><input type="number" min="0" value="${svc.teacherHourlyRate}" onchange="updateCatalogField('${svc.id}', 'teacherHourlyRate', this.value)"></div>
+            <div class="field"><label>Sueldo mensual maestra (MXN)</label><input type="number" min="0" value="${svc.teacherMonthlySalary}" onchange="updateCatalogField('${svc.id}', 'teacherMonthlySalary', this.value)"></div>
+            <div class="field"><label># Meses del ciclo escolar</label><input type="number" min="1" max="12" value="${svc.monthsInCycle}" onchange="updateCatalogField('${svc.id}', 'monthsInCycle', this.value)"></div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
             <div class="field"><label>Tarifa hora planeación (MXN)</label><input type="number" min="0" value="${svc.planningHourlyRate}" onchange="updateCatalogField('${svc.id}', 'planningHourlyRate', this.value)"></div>
+            <div class="field"><label>Horas planeación S1 (creación)</label><input type="number" min="0" step="0.5" value="${svc.planningHoursS1}" onchange="updateCatalogField('${svc.id}', 'planningHoursS1', this.value)"></div>
           </div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
             <div class="field"><label>Costo por manual (MXN)</label><input type="number" min="0" value="${svc.manualUnitCost}" onchange="updateCatalogField('${svc.id}', 'manualUnitCost', this.value)"></div>
             <div class="field"><label>% Utilidad sobre costo</label><input type="number" min="0" max="200" value="${svc.utilityPct}" onchange="updateCatalogField('${svc.id}', 'utilityPct', this.value)"></div>
           </div>
           <div style="font-size: 10.5px; color: #8a6500; margin-top: 8px; font-style: italic;">
-            La planeación de S1 incluye diseño desde cero · S2 solo ajustes (mucho menor)
+            S1 (creación): incluye horas de planeación · S2 (ejecución): sin planeación, solo manuales y maestra
           </div>
           <button class="delete-svc-btn" onclick="deleteServiceFromCatalog('${svc.id}')">Eliminar servicio del catálogo</button>
         </div>
         ${isSelected ? `
-        <!-- Semestre 1 -->
-        <div style="padding: 14px 16px; background: rgba(2,193,244,0.04); border-left: 3px solid var(--cyan); border-radius: 4px; margin-top: 12px;">
-          <div style="font-size: 11px; color: var(--cyan); font-weight: bold; letter-spacing: 2px; margin-bottom: 10px;">SEMESTRE 1 · DISEÑO + EJECUCIÓN</div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-            <div class="field"><label># Sesiones</label><input type="number" min="1" value="${cfg.sessionsS1}" onchange="updateSelectedField('${svc.id}', 'sessionsS1', this.value)"></div>
-            <div class="field"><label>Horas planeación (S1)</label><input type="number" min="0" step="0.5" value="${cfg.planningHoursS1}" onchange="updateSelectedField('${svc.id}', 'planningHoursS1', this.value)"></div>
-          </div>
-        </div>
-        <!-- Semestre 2 -->
-        <div style="padding: 14px 16px; background: rgba(2,193,244,0.02); border-left: 3px solid #b0b0b0; border-radius: 4px; margin-top: 10px;">
-          <div style="font-size: 11px; color: var(--grey); font-weight: bold; letter-spacing: 2px; margin-bottom: 10px;">SEMESTRE 2 · EJECUCIÓN + AJUSTES</div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-            <div class="field"><label># Sesiones</label><input type="number" min="1" value="${cfg.sessionsS2}" onchange="updateSelectedField('${svc.id}', 'sessionsS2', this.value)"></div>
-            <div class="field"><label>Horas planeación (S2)</label><input type="number" min="0" step="0.5" value="${cfg.planningHoursS2}" onchange="updateSelectedField('${svc.id}', 'planningHoursS2', this.value)"></div>
-          </div>
-        </div>
-        <!-- Comunes -->
-        <div class="service-controls" style="grid-template-columns: 1fr 1fr; margin-top: 10px;">
-          <div class="field"><label>Duración por sesión (horas)</label><input type="number" min="0.5" step="0.05" value="${cfg.sessionDuration}" onchange="updateSelectedField('${svc.id}', 'sessionDuration', this.value)"></div>
-          <div class="field"><label># Manuales (alumnos)</label><input type="number" min="1" value="${cfg.manuals}" onchange="updateSelectedField('${svc.id}', 'manuals', this.value)"></div>
+        <!-- Input principal: # alumnos -->
+        <div class="service-controls" style="grid-template-columns: 1fr 1fr 1fr;">
+          <div class="field"><label># Alumnos (manuales)</label><input type="number" min="1" value="${cfg.students}" onchange="updateSelectedField('${svc.id}', 'students', this.value)"></div>
+          <div class="field" style="opacity: 0.7;"><label>Sueldo maestra ${breakdown.months} meses</label><input type="text" value="${formatMoney(breakdown.teacherTotal)}" disabled></div>
+          <div class="field" style="opacity: 0.7;"><label>Planeación S1 (${breakdown.planHoursS1}h)</label><input type="text" value="${formatMoney(breakdown.planningS1Total)}" disabled></div>
         </div>
 
         <!-- Desglose admin -->
         <div class="admin-only" style="margin-top: 10px; padding: 12px; background: #fff8e6; border: 1px dashed #f0c000; border-radius: 4px; font-size: 11px;">
           <div style="color: #8a6500; font-weight: bold; letter-spacing: 1px; margin-bottom: 8px;">DESGLOSE INTERNO (SOLO ADMIN)</div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; color: #333;">
-            <div>S1 · Sesiones (${cfg.sessionsS1} × ${cfg.sessionDuration}h × ${formatMoney(svc.teacherHourlyRate)}/h):</div><div style="text-align: right; font-weight: 600;">${formatMoney(breakdown.s1Teaching)}</div>
-            <div>S1 · Planeación (${cfg.planningHoursS1}h × ${formatMoney(svc.planningHourlyRate)}/h):</div><div style="text-align: right; font-weight: 600;">${formatMoney(breakdown.s1Planning)}</div>
-            <div>S2 · Sesiones (${cfg.sessionsS2} × ${cfg.sessionDuration}h × ${formatMoney(svc.teacherHourlyRate)}/h):</div><div style="text-align: right; font-weight: 600;">${formatMoney(breakdown.s2Teaching)}</div>
-            <div>S2 · Planeación (${cfg.planningHoursS2}h × ${formatMoney(svc.planningHourlyRate)}/h):</div><div style="text-align: right; font-weight: 600;">${formatMoney(breakdown.s2Planning)}</div>
-            <div>Manuales (${cfg.manuals} × ${formatMoney(svc.manualUnitCost)}):</div><div style="text-align: right; font-weight: 600;">${formatMoney(breakdown.manualsCost)}</div>
+          <div style="display: grid; grid-template-columns: 1fr auto; gap: 6px; color: #333;">
+            <div>Sueldo maestra (${formatMoney(breakdown.monthlySalary)}/mes × ${breakdown.months} meses):</div><div style="text-align: right; font-weight: 600;">${formatMoney(breakdown.teacherTotal)}</div>
+            <div>Planeación S1 (${breakdown.planHoursS1}h × ${formatMoney(breakdown.planRate)}/h):</div><div style="text-align: right; font-weight: 600;">${formatMoney(breakdown.planningS1Total)}</div>
+            <div>Manuales (${breakdown.students} × ${formatMoney(breakdown.manualCost)}):</div><div style="text-align: right; font-weight: 600;">${formatMoney(breakdown.manualsCost)}</div>
             <div style="border-top: 1px solid #f0c000; padding-top: 4px; margin-top: 4px;">Costo HOUP total:</div><div style="text-align: right; font-weight: bold; border-top: 1px solid #f0c000; padding-top: 4px; margin-top: 4px;">${formatMoney(breakdown.baseCost)}</div>
             <div>+ Utilidad ${svc.utilityPct}%:</div><div style="text-align: right; font-weight: 600; color: var(--cyan);">+${formatMoney(breakdown.salePrice - breakdown.baseCost)}</div>
           </div>
@@ -849,7 +832,7 @@ function renderServiceCard(svc) {
         <div style="margin-top: 12px; padding: 14px 16px; background: rgba(2,193,244,0.06); border-left: 3px solid var(--cyan); border-radius: 4px;">
           <div style="color: var(--cyan); font-weight: bold; letter-spacing: 1px; margin-bottom: 4px; font-size: 11px;">PRECIO DE VENTA AL CLIENTE · CICLO ANUAL</div>
           <div style="font-size: 22px; font-weight: bold; color: var(--black);">${formatMoney(breakdown.salePrice)}</div>
-          <div style="color: var(--grey); font-size: 11px; margin-top: 4px;">Incluye creación, ejecución, manuales y proyecto social</div>
+          <div style="color: var(--grey); font-size: 11px; margin-top: 4px;">Incluye creación, ejecución completa, manuales y proyecto social</div>
         </div>
         <div class="service-line-total"><span class="label">SUBTOTAL DEL SERVICIO</span>${formatMoney(lineTotal)}</div>
         ` : ''}
@@ -1172,40 +1155,42 @@ function calcConsultingEvent(svc, cfg) {
 }
 
 // Calcula desglose de curso optativo (devuelve costos y total venta)
+// Modelo: maestra fija mensual + planeación S1 + manuales por alumno + utilidad
 function calcOptionalCourse(svc, cfg) {
-  const sessionsS1 = cfg.sessionsS1 || svc.defaultSessionsS1 || 15;
-  const sessionsS2 = cfg.sessionsS2 || svc.defaultSessionsS2 || 14;
-  const duration = cfg.sessionDuration || svc.defaultSessionDuration || 1.33;
-  const planS1 = cfg.planningHoursS1 || svc.defaultPlanningHoursS1 || 40;
-  const planS2 = cfg.planningHoursS2 || svc.defaultPlanningHoursS2 || 10;
-  const manuals = cfg.manuals || svc.defaultManuals || 20;
+  const students = cfg.students || svc.defaultStudents || 20;
 
-  const teacherRate = svc.teacherHourlyRate || 0;
-  const planningRate = svc.planningHourlyRate || 0;
+  const monthlySalary = svc.teacherMonthlySalary || 0;
+  const months = svc.monthsInCycle || 10;
+  const planRate = svc.planningHourlyRate || 0;
+  const planHoursS1 = svc.planningHoursS1 || 0;
   const manualCost = svc.manualUnitCost || 0;
   const utility = svc.utilityPct || 65;
 
-  // Semestre 1
-  const s1Teaching = sessionsS1 * duration * teacherRate;
-  const s1Planning = planS1 * planningRate;
-  const s1Subtotal = s1Teaching + s1Planning;
+  // Costo total maestra (sueldo agregado mensual × meses del ciclo)
+  const teacherTotal = monthlySalary * months;
 
-  // Semestre 2
-  const s2Teaching = sessionsS2 * duration * teacherRate;
-  const s2Planning = planS2 * planningRate;
-  const s2Subtotal = s2Teaching + s2Planning;
+  // Planeación solo S1 (S2 ya no tiene planeación)
+  const planningS1Total = planHoursS1 * planRate;
 
-  // Manuales (un set para todo el año — los alumnos suelen cambiar de optativa entre semestres pero el manual del curso es uno)
-  const manualsCost = manuals * manualCost;
+  // Manuales por alumno
+  const manualsCost = students * manualCost;
 
-  // Costo total + utilidad
-  const baseCost = s1Subtotal + s2Subtotal + manualsCost;
+  // Costo base + utilidad
+  const baseCost = teacherTotal + planningS1Total + manualsCost;
   const salePrice = baseCost * (1 + utility / 100);
 
   return {
-    s1Teaching, s1Planning, s1Subtotal,
-    s2Teaching, s2Planning, s2Subtotal,
-    manualsCost, baseCost, salePrice
+    teacherTotal,
+    planningS1Total,
+    manualsCost,
+    baseCost,
+    salePrice,
+    months,
+    monthlySalary,
+    planRate,
+    planHoursS1,
+    students,
+    manualCost
   };
 }
 
@@ -1322,12 +1307,7 @@ function defaultCfgFor(svc) {
       return { personas: svc.defaultPersonas || 8, hours: svc.defaultHours || 4 };
     case "optional-course":
       return {
-        sessionsS1: svc.defaultSessionsS1 || 15,
-        sessionsS2: svc.defaultSessionsS2 || 14,
-        sessionDuration: svc.defaultSessionDuration || 1.33,
-        planningHoursS1: svc.defaultPlanningHoursS1 || 40,
-        planningHoursS2: svc.defaultPlanningHoursS2 || 10,
-        manuals: svc.defaultManuals || 20
+        students: svc.defaultStudents || 20
       };
     // viejo "generation-sessions" (lo dejamos por compat, en realidad ya no se usa)
     case "generation-sessions": {
@@ -1571,8 +1551,7 @@ function updateTotals() {
         const numFacs = calcNumFacilitators(s.cfg.personas || 8);
         qtyText = `${s.cfg.personas} personas · ${s.cfg.hours}h · ${numFacs} facilitador${numFacs !== 1 ? 'es' : ''}`;
       } else if (s.svc.type === "optional-course") {
-        const totalSes = (s.cfg.sessionsS1 || 0) + (s.cfg.sessionsS2 || 0);
-        qtyText = `Ciclo anual · ${totalSes} sesiones (${s.cfg.sessionsS1} + ${s.cfg.sessionsS2}) · ${s.cfg.manuals} manuales`;
+        qtyText = `Ciclo anual · ${s.cfg.students} alumnos · maestra ${s.svc.monthsInCycle} meses · planeación S1 ${s.svc.planningHoursS1}h`;
       } else if (s.svc.type === "generation-sessions") {
         const enabledGens = s.svc.generations.filter(g => s.cfg.generations && s.cfg.generations[g.id] && s.cfg.generations[g.id].enabled);
         const totalPersonas = enabledGens.reduce((acc, g) => acc + (s.cfg.generations[g.id].personas || 0), 0);
@@ -1678,8 +1657,7 @@ function updatePrintSummary(data) {
         const numFacs = calcNumFacilitators(s.cfg.personas || 8);
         qtyText = `${s.cfg.personas} personas · ${s.cfg.hours} horas · ${numFacs} facilitador${numFacs !== 1 ? 'es' : ''} · planeación, materiales y utilidad incluidos`;
       } else if (s.svc.type === "optional-course") {
-        const totalSes = (s.cfg.sessionsS1 || 0) + (s.cfg.sessionsS2 || 0);
-        qtyText = `Cotización anual · Semestre 1: ${s.cfg.sessionsS1} sesiones + ${s.cfg.planningHoursS1}h planeación · Semestre 2: ${s.cfg.sessionsS2} sesiones + ${s.cfg.planningHoursS2}h ajustes · ${s.cfg.manuals} manuales · proyecto social incluido`;
+        qtyText = `Cotización anual · ${s.cfg.students} alumnos · sueldo maestra ${s.svc.monthsInCycle} meses · planeación S1 (${s.svc.planningHoursS1}h) · proyecto social incluido`;
       } else if (s.svc.type === "generation-sessions") {
         const enabled = s.svc.generations.filter(g => s.cfg.generations && s.cfg.generations[g.id] && s.cfg.generations[g.id].enabled);
         const desglose = enabled.map(g => `${g.label.split('·')[0].trim()}: ${s.cfg.generations[g.id].personas} pers.`).join(' · ');
